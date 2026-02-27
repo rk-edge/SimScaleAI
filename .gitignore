@@ -1,0 +1,39 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Training artifacts
+checkpoints/
+data/
+wandb/
+runs/
+eval_videos/
+
+# MuJoCo assets (auto-generated)
+simscaleai/sim/assets/*.xml
+
+# Jupyter
+.ipynb_checkpoints/
+MUJOCO_LOG.TXT

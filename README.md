@@ -186,6 +186,25 @@ PPO reward curves, episode lengths, and policy/value losses:
 
 ---
 
+## Juggle Environment — Evaluation Results
+
+A 3-ball juggling task using the Franka Panda arm with a flat paddle. Three policies were trained and evaluated over 20 episodes each:
+
+| Metric | Scripted (Expert) | BC (Imitation) | PPO (RL) |
+|---|---|---|---|
+| **Mean Reward** | 95.9 ± 61.3 | 95.7 ± 61.0 | 94.9 ± 61.2 |
+| **Mean Episode Length** | 53.4 ± 62.7 | 53.4 ± 62.7 | 52.3 ± 63.1 |
+| **Max Balls Airborne** | 3 | 3 | 3 |
+| **Best Episode Reward** | 279.9 | 278.8 | 278.8 |
+| **Worst Episode Reward** | 63.0 | 62.9 | 62.9 |
+
+**Takeaways:**
+- **BC nearly matches the expert** — trained on only 200 demonstration episodes (loss 0.38 → 0.06).
+- **PPO is competitive** with 50K timesteps; more training would likely surpass imitation.
+- **All policies achieve 3 balls airborne** simultaneously in their best episodes.
+
+---
+
 ## Key Features
 
 ### 1. Physics Simulation (MuJoCo)
@@ -275,4 +294,4 @@ pytest tests/ --cov=simscaleai --cov-report=term-missing
 
 ## License
 
-MIT
+Apache 2.0 — see [LICENSE](LICENSE).

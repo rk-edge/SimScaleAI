@@ -9,21 +9,22 @@ Built to demonstrate the full stack of robotic AI infrastructure: simulation env
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                     SimScaleAI CLI                       │
-│            simscale train | eval | datagen | rl          │
+│         simscale train | eval | datagen | rl | viz       │
 ├──────────────┬───────────────┬───────────────────────────┤
 │  Simulation  │    Training   │       Models              │
-│  (MuJoCo)    │  Infrastructure│  (BC, VLA, Diffusion)    │
+│  (MuJoCo 3)  │  Infrastructure│  (BC, VLA, Diffusion)    │
 │              │  (PyTorch DDP) │                          │
 │  • Reach     │  • Distributed │  • Behavior Cloning      │
 │  • PickPlace │  • AMP/FSDP   │  • Vision-Language-Action │
-│  • Domain    │  • Checkpoint  │  • Diffusion Policy Head │
-│    Randomize │  • WandB log  │  • Model Registry        │
+│  • Juggle    │  • Checkpoint  │  • Diffusion Policy Head │
+│  • Domain    │  • WandB log  │  • Model Registry        │
+│    Randomize │  • VLA train  │                          │
 ├──────────────┼───────────────┼───────────────────────────┤
 │      RL Pipeline             │   Synthetic Data Gen      │
-│  • PPO Agent                 │  • Scene randomization    │
+│  • PPO Agent                 │  • Domain randomization   │
 │  • GAE Advantages            │  • Multi-modal capture    │
-│  • Closed-loop eval          │  • HDF5 export            │
-│  • Reward function library   │  • Dataset statistics     │
+│  • Closed-loop eval          │  • Language instructions  │
+│  • Reward function library   │  • HDF5 export            │
 └──────────────────────────────┴───────────────────────────┘
 ```
 
@@ -97,12 +98,15 @@ SimScaleAI/
 │   ├── sim/                    # Simulation environments
 │   │   ├── base_env.py         # Abstract MuJoCo environment
 │   │   ├── factory.py          # Environment registry & factory
+│   │   ├── domain_randomization.py  # DR config & pipeline
 │   │   ├── assets/             # MJCF robot/scene files (auto-generated)
 │   │   └── envs/
 │   │       ├── reach_env.py    # Reach task (move EE to target)
-│   │       └── pick_place_env.py # Pick-and-place manipulation
+│   │       ├── pick_place_env.py # Pick-and-place manipulation
+│   │       └── juggle_env.py   # 3-ball juggling
 │   ├── training/               # ML training infrastructure
 │   │   ├── trainer.py          # Distributed training loop (DDP/AMP)
+│   │   ├── train_vla.py        # Language-conditioned VLA pipeline
 │   │   └── data/
 │   │       └── dataset.py      # HDF5 trajectory datasets
 │   ├── models/                 # Foundation model architectures
@@ -205,16 +209,57 @@ A 3-ball juggling task using the Franka Panda arm with a flat paddle. Three poli
 
 ---
 
+## Pick-and-Place — Full Pipeline Results
+
+The core manipulation benchmark: Franka Panda picks a 3cm red cube and places it at a randomized green target, using damped pseudoinverse IK and a kinematic grasp lock.
+
+### Training Summary
+
+| Model | Data | Steps | Loss (start → end) |
+|---|---|---|---|
+| **BC** | 200 eps, 37.8K steps | 3,000 | 0.385 → 0.010 |
+| **BC-DR** | 200 eps, 58.8K steps (domain‑randomized) | 3,000 | 0.396 → 0.009 |
+| **PPO** | Online (50K env steps) | 50,000 | reward −43.4 → −6.6 |
+| **VLA** | 37.8K steps + language instructions | 2,000 | 0.300 → 0.064 |
+
+### Evaluation (50 episodes each)
+
+| Policy | Reward | Success | Avg Length |
+|---|---|---|---|
+| **Scripted** (expert) | 145.1 ± 148.9 | 20.0% | 261 |
+| **BC** (imitation) | 55.6 ± 76.0 | 0.0% | 300 |
+| **BC‑DR** (domain‑randomized, eval on DR env) | −35.4 ± 99.3 | 0.0% | 300 |
+| **PPO** (RL, 50K steps) | −7.6 ± 40.1 | 0.0% | 300 |
+| **VLA** (language‑conditioned) | −46.7 ± 50.0 | 0.0% | 300 |
+
+**Takeaways:**
+- **Scripted policy achieves 20% success** — pick‑and‑place is significantly harder than reaching, requiring precise multi‑phase coordination (approach → descend → grasp → lift → transport → place).
+- **BC captures the motion pattern** (positive reward) but hasn't generalized grasping from 200 demos — more data and longer training would improve this.
+- **PPO learns to avoid penalties** (reward near 0) but hasn't discovered the full grasp→lift sequence in 50K steps — contact‑rich manipulation typically needs millions of steps.
+- **VLA demonstrates language‑conditioned action prediction** — a 1.4M parameter model that fuses vision + language + state through a transformer to output actions.
+- **Domain randomization** systematically varies physics (friction, mass, damping, gains), geometry (object size), and visuals (lighting, camera, materials) for sim‑to‑real transfer.
+
+---
+
 ## Key Features
 
 ### 1. Physics Simulation (MuJoCo)
 - Gymnasium-compatible environments for Franka Panda arm
-- Reach and pick-and-place manipulation tasks
+- Reach, pick-and-place, and 3-ball juggling tasks
+- Damped pseudoinverse IK with kinematic grasp lock
 - Multi-camera rendering (RGB, depth, segmentation)
-- Domain randomization (lighting, friction, object poses)
 - Configurable via YAML — swap tasks without code changes
 
-### 2. Distributed Training Infrastructure (PyTorch)
+### 2. Domain Randomization Pipeline
+- Configurable `DomainRandomizationConfig` with 15+ randomization targets
+- **Visual**: lighting direction/color, camera pose/FOV, material colors
+- **Physics**: friction, mass, damping, actuator gains
+- **Geometry**: object size, table position
+- **Dynamics**: gravity noise, timestep variation
+- Nominal-value caching for relative randomization
+- Integrated into base environment — enabled with `domain_randomization=True`
+
+### 3. Distributed Training Infrastructure (PyTorch)
 - PyTorch DDP for multi-GPU distributed training
 - Mixed precision (AMP) with BFloat16/Float16
 - Warmup + cosine decay learning rate schedule
@@ -224,23 +269,23 @@ A 3-ball juggling task using the Franka Panda arm with a flat paddle. Three poli
 
 ### 3. Foundation Model Architectures
 - **Behavior Cloning (BC)**: State and image-conditioned imitation learning
-- **Vision-Language-Action (VLA)**: Transformer model that takes image + language → robot action (inspired by RT-2/OpenVLA)
+- **Vision-Language-Action (VLA)**: 1.4M parameter transformer — ViT encoder + char-level language encoder + fusion transformer → robot actions, conditioned on natural language instructions (inspired by RT-2/OpenVLA)
 - **Diffusion Policy Head**: Denoising diffusion for multi-modal action distributions
 - **Model Registry**: Add new architectures with `@register_model("name")`
 
-### 4. Reinforcement Learning
+### 5. Reinforcement Learning
 - PPO agent with Generalized Advantage Estimation (GAE)
 - Closed-loop evaluation (model controls robot in real-time)
 - Composable reward function library
 - Vectorized environment support
 
-### 5. Synthetic Data Generation
+### 6. Synthetic Data Generation
 - Automated trajectory recording from simulation
 - Domain randomization for diverse training data
 - HDF5 export with compression
 - Dataset statistics and validation
 
-### 6. CLI Tooling
+### 7. CLI Tooling
 - `simscale train` — launch any training experiment
 - `simscale eval` — closed-loop checkpoint evaluation
 - `simscale datagen` — generate datasets at scale

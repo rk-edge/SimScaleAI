@@ -219,19 +219,26 @@ class BaseRobotEnv(gym.Env, abc.ABC):
     def _apply_domain_randomization(self, rng: np.random.Generator) -> None:
         """Apply visual and physics domain randomization.
 
-        Override in subclasses for task-specific randomization.
+        Uses the configurable DomainRandomizationConfig pipeline for
+        systematic randomization of visual, physics, and geometry
+        parameters.  Override in subclasses for task-specific additions.
         """
-        # Randomize lighting direction
-        if self.model.nlight > 0:
-            for i in range(self.model.nlight):
-                self.model.light_dir[i] = rng.uniform(-1, 1, size=3)
-                self.model.light_diffuse[i] = rng.uniform(0.3, 1.0, size=3)
+        from simscaleai.sim.domain_randomization import (
+            DomainRandomizationConfig,
+            apply_domain_randomization,
+        )
 
-        # Randomize friction coefficients (±20%)
-        for i in range(self.model.ngeom):
-            original = self.model.geom_friction[i].copy()
-            noise = rng.uniform(0.8, 1.2, size=original.shape)
-            self.model.geom_friction[i] = original * noise
+        if not hasattr(self, "_dr_config"):
+            self._dr_config = DomainRandomizationConfig()
+        if not hasattr(self, "_dr_nominal"):
+            from simscaleai.sim.domain_randomization import _cache_nominal
+            self._dr_nominal = _cache_nominal(self.model)
+
+        apply_domain_randomization(
+            self.model, self.data, rng,
+            config=self._dr_config,
+            nominal_state=self._dr_nominal,
+        )
 
     # ── Cleanup ────────────────────────────────────────────────────────────
 

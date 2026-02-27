@@ -51,6 +51,7 @@ def generate_dataset(
         domain_randomization=domain_randomization,
         max_episode_steps=max_steps,
         seed=seed,
+        cameras=[],
     )
 
     # Select data collection policy
@@ -73,6 +74,11 @@ def generate_dataset(
 
         for ep_idx in range(n_episodes):
             obs, info = env.reset(seed=int(rng.integers(0, 2**31)))
+
+            # Reset stateful policies between episodes
+            if hasattr(policy_fn, '_phase'):
+                policy_fn._phase = 0
+                policy_fn._phase_steps = 0
 
             # Collect episode data
             observations: dict[str, list] = {k: [] for k in obs.keys()}
@@ -142,8 +148,11 @@ def _get_policy(policy_type: str, env) -> Any:
     elif policy_type == "scripted":
         # Auto-detect env type for scripted policy
         from simscaleai.sim.envs.juggle_env import JuggleEnv
+        from simscaleai.sim.envs.pick_place_env import PickPlaceEnv
         if isinstance(env, JuggleEnv):
             return _scripted_juggle_policy
+        if isinstance(env, PickPlaceEnv):
+            return _PickPlaceStateMachine()
         return _scripted_reach_policy
     else:
         raise ValueError(f"Unknown policy type: {policy_type}")
@@ -216,3 +225,100 @@ def _scripted_juggle_policy(obs: dict[str, np.ndarray]) -> np.ndarray:
     action[3] = np.clip(-xy_error[0] * 2.0, -0.5, 0.5)
 
     return np.clip(action, -1.0, 1.0)
+
+
+class _PickPlaceStateMachine:
+    """Scripted pick-and-place policy with 6 phases.
+
+    Phase 0 — Approach: move EE above the object
+    Phase 1 — Descend: lower EE onto the object
+    Phase 2 — Grasp: close gripper and wait
+    Phase 3 — Lift: raise object above table
+    Phase 4 — Transport: move horizontally to target
+    Phase 5 — Lower & release: descend to target and open gripper
+    """
+
+    def __init__(self) -> None:
+        self._phase = 0
+        self._phase_steps = 0
+
+    def __call__(self, obs: dict[str, np.ndarray]) -> np.ndarray:
+        ee_pos = obs["ee_pos"]
+        obj_pos = obs["object_pos"]
+        target_pos = obs["target_pos"]
+
+        action = np.zeros(4)
+        APPROACH_HEIGHT = 0.12  # height above object for approach
+        GRASP_STEPS = 10  # steps to hold gripper closed
+        LIFT_HEIGHT = 0.55  # absolute z to lift to
+
+        if self._phase == 0:
+            # Move above the object (XY) with gripper open
+            goal = obj_pos.copy()
+            goal[2] += APPROACH_HEIGHT
+            direction = goal - ee_pos
+            dist = np.linalg.norm(direction)
+            action[:3] = np.clip(direction * 5.0, -1, 1)
+            action[3] = 1.0  # open gripper
+            if dist < 0.06:
+                self._phase = 1
+                self._phase_steps = 0
+
+        elif self._phase == 1:
+            # Descend onto object
+            goal = obj_pos.copy()
+            goal[2] += 0.02  # slightly above centre
+            direction = goal - ee_pos
+            dist = np.linalg.norm(direction)
+            action[:3] = np.clip(direction * 5.0, -1, 1)
+            action[3] = 1.0  # keep open
+            if dist < 0.06:
+                self._phase = 2
+                self._phase_steps = 0
+
+        elif self._phase == 2:
+            # Close gripper
+            action[:3] = 0.0
+            action[3] = -1.0  # close
+            self._phase_steps += 1
+            if self._phase_steps >= GRASP_STEPS:
+                self._phase = 3
+                self._phase_steps = 0
+
+        elif self._phase == 3:
+            # Lift — retract slightly toward base while going up
+            goal = ee_pos.copy()
+            goal[2] = LIFT_HEIGHT
+            goal[0] = max(ee_pos[0] - 0.05, 0.25)  # retract toward base
+            direction = goal - ee_pos
+            action[:3] = np.clip(direction * 5.0, -1, 1)
+            action[3] = -1.0  # keep closed
+            if ee_pos[2] > LIFT_HEIGHT - 0.05:
+                self._phase = 4
+                self._phase_steps = 0
+
+        elif self._phase == 4:
+            # Transport to above target
+            goal = target_pos.copy()
+            goal[2] = LIFT_HEIGHT
+            direction = goal - ee_pos
+            dist_xy = np.linalg.norm(direction[:2])
+            action[:3] = np.clip(direction * 5.0, -1, 1)
+            action[3] = -1.0  # keep closed
+            if dist_xy < 0.06:
+                self._phase = 5
+                self._phase_steps = 0
+
+        elif self._phase == 5:
+            # Lower to target and release
+            goal = target_pos.copy()
+            goal[2] += 0.02
+            direction = goal - ee_pos
+            dist = np.linalg.norm(direction)
+            action[:3] = np.clip(direction * 5.0, -1, 1)
+            if dist < 0.06:
+                action[3] = 1.0  # open gripper to release
+            else:
+                action[3] = -1.0  # keep closed while lowering
+
+        return np.clip(action, -1.0, 1.0)

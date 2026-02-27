@@ -66,9 +66,20 @@ class PickPlaceEnv(BaseRobotEnv):
             self.model, mujoco.mjtObj.mjOBJ_BODY, "place_target"
         )
 
-        # Track grasp state
+        # Object free-joint address
+        self._obj_qpos_addr = self.model.jnt_qposadr[
+            self.model.body_jntadr[self._object_body_id]
+        ]
+        self._obj_qvel_addr = self.model.jnt_dofadr[
+            self.model.body_jntadr[self._object_body_id]
+        ]
+
+        # Grasp state
         self._object_grasped = False
         self._object_lifted = False
+        self._grasp_locked = False  # True when object is kinematically attached
+        self._grasp_offset = np.zeros(3)  # EE → object offset when grasped
+        self._gripper_cmd = 1.0  # Last gripper command
 
     def _build_observation_space(self) -> spaces.Space:
         obs_dict = {
@@ -91,23 +102,97 @@ class PickPlaceEnv(BaseRobotEnv):
         return spaces.Box(-1.0, 1.0, shape=(4,), dtype=np.float64)
 
     def _get_obs(self) -> dict[str, np.ndarray]:
-        object_body = self._object_body_id
-        obj_qpos_addr = self.model.jnt_qposadr[
-            self.model.body_jntadr[object_body]
-        ]
+        a = self._obj_qpos_addr
         obs = {
             "joint_pos": self.data.qpos[:7].copy(),
             "joint_vel": self.data.qvel[:7].copy(),
             "ee_pos": self.data.site_xpos[self._ee_site_id].copy(),
-            "object_pos": self.data.xpos[object_body].copy(),
-            "object_quat": self.data.qpos[obj_qpos_addr + 3: obj_qpos_addr + 7].copy(),
+            "object_pos": self.data.xpos[self._object_body_id].copy(),
+            "object_quat": self.data.qpos[a + 3: a + 7].copy(),
             "target_pos": self._target_pos.copy(),
-            "gripper_state": np.array([self.data.qpos[7]]),  # finger joint
+            "gripper_state": np.array([self.data.qpos[7]]),
         }
         if self.config.cameras:
             camera_data = self.render_camera()
             obs["image"] = camera_data["rgb"]
         return obs
+
+    def _apply_action(self, action: np.ndarray) -> None:
+        """Map 4D action (delta_pos[3] + gripper[1]) to 9 actuators via damped pseudoinverse IK."""
+        action = np.clip(action, self.action_space.low, self.action_space.high)
+        delta_pos = action[:3] * 0.1  # Scale delta to metres
+        self._gripper_cmd = action[3]  # Save for grasp lock logic
+
+        # Compute positional Jacobian at end-effector site
+        jacp = np.zeros((3, self.model.nv))
+        mujoco.mj_jacSite(self.model, self.data, jacp, None, self._ee_site_id)
+
+        # Damped least-squares pseudoinverse: J^T (J J^T + λ²I)^{-1} Δx
+        j_arm = jacp[:, :7]
+        damping = 0.05
+        jjt = j_arm @ j_arm.T + damping**2 * np.eye(3)
+        joint_delta = j_arm.T @ np.linalg.solve(jjt, delta_pos)
+
+        # Position control
+        self.data.ctrl[:7] = self.data.qpos[:7] + joint_delta
+        # Gripper: -1 = close (0), +1 = open (0.04)
+        gripper_pos = (self._gripper_cmd + 1.0) / 2.0 * 0.04
+        self.data.ctrl[7] = gripper_pos
+        self.data.ctrl[8] = gripper_pos
+
+    def step(self, action):
+        """Override step to apply grasp lock after each physics substep."""
+        self._apply_action(action)
+
+        for _ in range(self.n_substeps):
+            mujoco.mj_step(self.model, self.data)
+            # Re-attach object to EE every substep while grasped
+            if self._grasp_locked:
+                ee_pos = self.data.site_xpos[self._ee_site_id]
+                a = self._obj_qpos_addr
+                self.data.qpos[a: a + 3] = ee_pos + self._grasp_offset
+                v = self._obj_qvel_addr
+                self.data.qvel[v: v + 6] = 0
+
+        # Check grasp lock transitions after physics
+        ee_pos = self.data.site_xpos[self._ee_site_id]
+        obj_pos = self.data.xpos[self._object_body_id]
+        reach_dist = float(np.linalg.norm(ee_pos - obj_pos))
+
+        if not self._grasp_locked:
+            if self._gripper_cmd < -0.5 and reach_dist < 0.08:
+                self._grasp_locked = True
+                self._object_grasped = True
+                self._grasp_offset = obj_pos - ee_pos
+        else:
+            if self._gripper_cmd > 0.5:
+                self._grasp_locked = False
+
+        self._step_count += 1
+        obs = self._get_obs()
+        reward = self._get_reward()
+        terminated = self._is_terminated()
+        truncated = self._step_count >= self.config.max_episode_steps
+        info = self._get_info()
+        return obs, reward, terminated, truncated, info
+
+    def _is_grasping(self) -> bool:
+        """Detect grasp via finger-object contact forces."""
+        # Get geom IDs by name
+        obj_geom = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "object_geom")
+        left_geom = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "left_finger_geom")
+        right_geom = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "right_finger_geom")
+
+        left_contact = False
+        right_contact = False
+        for i in range(self.data.ncon):
+            c = self.data.contact[i]
+            pair = {c.geom1, c.geom2}
+            if obj_geom in pair and left_geom in pair:
+                left_contact = True
+            if obj_geom in pair and right_geom in pair:
+                right_contact = True
+        return left_contact and right_contact
 
     def _get_reward(self) -> float:
         ee_pos = self.data.site_xpos[self._ee_site_id]
@@ -121,21 +206,23 @@ class PickPlaceEnv(BaseRobotEnv):
         reward += -reach_dist
 
         # Stage 2: Grasp bonus
-        if reach_dist < 0.05:
+        if self._grasp_locked:
             self._object_grasped = True
-            reward += 0.5
+            reward += 1.0
+        elif reach_dist < 0.08:
+            reward += 0.25  # proximity bonus
 
         # Stage 3: Lift bonus
-        if self._object_grasped and obj_pos[2] > 0.55:  # Above table surface
+        if self._object_grasped and obj_pos[2] > 0.48:
             self._object_lifted = True
-            reward += 0.5
+            reward += 1.0
 
         # Stage 4: Place — distance object → target
         if self._object_lifted:
             place_dist = float(np.linalg.norm(obj_pos - target_pos))
             reward += -place_dist
             if place_dist < 0.05:
-                reward += 2.0  # Big bonus for successful placement
+                reward += 5.0  # Big bonus for successful placement
 
         return reward
 
@@ -147,6 +234,8 @@ class PickPlaceEnv(BaseRobotEnv):
     def _reset_task(self, rng: np.random.Generator) -> None:
         self._object_grasped = False
         self._object_lifted = False
+        self._grasp_locked = False
+        self._grasp_offset = np.zeros(3)
 
         # Randomize object position on table
         obj_pos = np.array([
@@ -156,11 +245,9 @@ class PickPlaceEnv(BaseRobotEnv):
         ])
 
         # Set object position via free joint
-        obj_qpos_addr = self.model.jnt_qposadr[
-            self.model.body_jntadr[self._object_body_id]
-        ]
-        self.data.qpos[obj_qpos_addr: obj_qpos_addr + 3] = obj_pos
-        self.data.qpos[obj_qpos_addr + 3: obj_qpos_addr + 7] = [1, 0, 0, 0]  # Identity quat
+        a = self._obj_qpos_addr
+        self.data.qpos[a: a + 3] = obj_pos
+        self.data.qpos[a + 3: a + 7] = [1, 0, 0, 0]  # Identity quat
 
         # Randomize target position (different from object)
         self._target_pos = np.array([
@@ -183,6 +270,7 @@ class PickPlaceEnv(BaseRobotEnv):
             "place_dist": float(np.linalg.norm(obj_pos - self._target_pos)),
             "grasped": self._object_grasped,
             "lifted": self._object_lifted,
+            "is_grasping": self._is_grasping(),
             "success": self._is_terminated(),
         }
 
@@ -197,7 +285,7 @@ def _generate_pick_place_scene(xml_path: str) -> None:
     <default class="panda">
       <joint damping="1.0" armature="0.1"/>
       <geom condim="4" friction="1 0.5 0.01" margin="0.001"/>
-      <position kp="100" kv="20"/>
+      <position kp="200" kv="30"/>
     </default>
   </default>
 
@@ -217,7 +305,7 @@ def _generate_pick_place_scene(xml_path: str) -> None:
       <geom type="box" size="0.4 0.5 0.2" rgba="0.6 0.4 0.2 1" mass="100"/>
     </body>
 
-    <!-- Panda Arm (same as reach) -->
+    <!-- Panda Arm -->
     <body name="link0" pos="0.1 0 0.4" childclass="panda">
       <geom type="cylinder" size="0.06 0.05" rgba="0.9 0.9 0.9 1" mass="2"/>
       <body name="link1" pos="0 0 0.05">
@@ -242,15 +330,16 @@ def _generate_pick_place_scene(xml_path: str) -> None:
                     <joint name="j7" type="hinge" axis="0 0 1" range="-2.9 2.9"/>
                     <geom type="cylinder" size="0.04 0.02" material="robot_mat" mass="0.5"/>
                     <site name="ee_site" pos="0 0 0.04" size="0.01" rgba="1 0 0 1"/>
-                    <body name="left_finger" pos="0 0.02 0.04">
-                      <joint name="finger_left" type="slide" axis="0 1 0" range="0 0.04"/>
-                      <geom type="box" size="0.01 0.005 0.03" rgba="0.5 0.5 0.5 1" mass="0.1"
-                            friction="2 0.5 0.01"/>
+                    <!-- Wider fingers with named geoms for contact detection -->
+                    <body name="left_finger" pos="0 0.04 0.04">
+                      <joint name="finger_left" type="slide" axis="0 -1 0" range="0 0.04"/>
+                      <geom name="left_finger_geom" type="box" size="0.015 0.005 0.04"
+                            rgba="0.5 0.5 0.5 1" mass="0.1" friction="2 0.5 0.01" condim="4"/>
                     </body>
-                    <body name="right_finger" pos="0 -0.02 0.04">
-                      <joint name="finger_right" type="slide" axis="0 -1 0" range="0 0.04"/>
-                      <geom type="box" size="0.01 0.005 0.03" rgba="0.5 0.5 0.5 1" mass="0.1"
-                            friction="2 0.5 0.01"/>
+                    <body name="right_finger" pos="0 -0.04 0.04">
+                      <joint name="finger_right" type="slide" axis="0 1 0" range="0 0.04"/>
+                      <geom name="right_finger_geom" type="box" size="0.015 0.005 0.04"
+                            rgba="0.5 0.5 0.5 1" mass="0.1" friction="2 0.5 0.01" condim="4"/>
                     </body>
                   </body>
                 </body>
@@ -261,11 +350,11 @@ def _generate_pick_place_scene(xml_path: str) -> None:
       </body>
     </body>
 
-    <!-- Manipulable object -->
+    <!-- Manipulable object (small cube, 3cm) -->
     <body name="object" pos="0.5 0 0.45">
       <freejoint name="object_joint"/>
-      <geom type="box" size="0.025 0.025 0.025" material="object_mat" mass="0.1"
-            friction="1.5 0.5 0.01" condim="4"/>
+      <geom name="object_geom" type="box" size="0.015 0.015 0.015" material="object_mat"
+            mass="0.05" friction="1.5 0.5 0.01" condim="4"/>
     </body>
 
     <!-- Placement target (visual only) -->
@@ -288,8 +377,8 @@ def _generate_pick_place_scene(xml_path: str) -> None:
     <position class="panda" name="act_j5" joint="j5"/>
     <position class="panda" name="act_j6" joint="j6"/>
     <position class="panda" name="act_j7" joint="j7"/>
-    <position name="act_finger_left" joint="finger_left" kp="50"/>
-    <position name="act_finger_right" joint="finger_right" kp="50"/>
+    <position name="act_finger_left" joint="finger_left" kp="100"/>
+    <position name="act_finger_right" joint="finger_right" kp="100"/>
   </actuator>
 </mujoco>
 """

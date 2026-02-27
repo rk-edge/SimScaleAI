@@ -43,11 +43,10 @@ def make_env(
 
     # Build config from kwargs
     camera_kwargs = kwargs.pop("cameras", None)
-    cameras = (
-        [CameraConfig(**c) if isinstance(c, dict) else c for c in camera_kwargs]
-        if camera_kwargs
-        else [CameraConfig()]
-    )
+    if camera_kwargs is not None:
+        cameras = [CameraConfig(**c) if isinstance(c, dict) else c for c in camera_kwargs]
+    else:
+        cameras = [CameraConfig()]
     config = SimConfig(cameras=cameras, **kwargs)
 
     return _ENV_REGISTRY[env_name](config=config, render_mode=render_mode)

@@ -57,10 +57,12 @@ def _register_defaults() -> None:
     from simscaleai.sim.envs.reach_env import ReachEnv
     from simscaleai.sim.envs.pick_place_env import PickPlaceEnv
     from simscaleai.sim.envs.juggle_env import JuggleEnv
+    from simscaleai.sim.envs.cloth_fold_env import ClothFoldEnv
 
     register_env("reach", ReachEnv)
     register_env("pick_place", PickPlaceEnv)
     register_env("juggle", JuggleEnv)
+    register_env("cloth_fold", ClothFoldEnv)
 
 
 def list_envs() -> list[str]:

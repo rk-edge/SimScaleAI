@@ -17,8 +17,9 @@ Built to demonstrate the full stack of robotic AI infrastructure: simulation env
 │  • Reach     │  • Distributed │  • Behavior Cloning      │
 │  • PickPlace │  • AMP/FSDP   │  • Vision-Language-Action │
 │  • Juggle    │  • Checkpoint  │  • Diffusion Policy Head │
-│  • Domain    │  • WandB log  │  • Model Registry        │
-│    Randomize │  • VLA train  │                          │
+│  • ClothFold │  • WandB log  │  • Model Registry        │
+│  • Domain    │  • VLA train  │                          │
+│    Randomize │               │                          │
 ├──────────────┼───────────────┼───────────────────────────┤
 │      RL Pipeline             │   Synthetic Data Gen      │
 │  • PPO Agent                 │  • Domain randomization   │
@@ -278,11 +279,50 @@ Systematic evaluation of how policies trained under different conditions transfe
 
 ---
 
+## Deformable Object Manipulation: Cloth Folding
+
+**Genuinely frontier research territory**: autonomous cloth folding with learned policies on physically-accurate deformable simulation.
+
+### Physics
+
+Uses MuJoCo 3.x `<flexcomp>` for real-time FEM cloth simulation:
+- 8×8 vertex grid (64 vertices, 192 DOFs) with edge damping + self-collision
+- Kinematic grasp lock: cloth edge vertices attached to end-effector during manipulation
+- Body-frame ↔ world coordinate mapping for accurate vertex kinematics
+
+### Task
+
+Pick up one edge of a 17.5cm × 17.5cm cloth and fold it onto the opposite edge:
+
+| Stage | Description |
+|-------|-------------|
+| 1. Approach | Move EE above the far edge of the cloth |
+| 2. Grasp | Close gripper to lock 8 edge vertices to EE |
+| 3. Lift | Lift edge slightly above the table |
+| 4. Fold | Sweep grasped edge toward the target edge (−X direction) |
+| 5. Release | Open gripper — cloth should remain folded |
+
+### Results
+
+| Metric | Scripted Expert | BC (learned) |
+|--------|----------------|--------------|
+| **Success rate** | 100% | 100% |
+| **Steps to fold** | 77 | 372 |
+| **Final fold distance** | 0.028m | 0.010m |
+| **Mean reward** | 129.6 | 615.6 |
+
+**Key insight**: BC successfully learns to fold cloth but takes ~5× longer than the scripted expert. The learned policy starts with cautious movements (action magnitude ≈ 0.11) then accelerates near the goal (≈ 0.40), demonstrating emergent precision—it learns to be careful with deformable objects.
+
+Training: 100 expert demos (7,700 timesteps) → 5,000 BC steps on MPS → 222-dim state → 4-dim delta actions.
+
+---
+
 ## Key Features
 
 ### 1. Physics Simulation (MuJoCo)
 - Gymnasium-compatible environments for Franka Panda arm
-- Reach, pick-and-place, and 3-ball juggling tasks
+- Reach, pick-and-place, 3-ball juggling, and **cloth folding** (deformable) tasks
+- MuJoCo 3.x `<flexcomp>` for real-time FEM cloth simulation (64 vertices, 192 DOFs)
 - Damped pseudoinverse IK with kinematic grasp lock
 - Multi-camera rendering (RGB, depth, segmentation)
 - Configurable via YAML — swap tasks without code changes

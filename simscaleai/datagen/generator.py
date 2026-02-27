@@ -149,10 +149,13 @@ def _get_policy(policy_type: str, env) -> Any:
         # Auto-detect env type for scripted policy
         from simscaleai.sim.envs.juggle_env import JuggleEnv
         from simscaleai.sim.envs.pick_place_env import PickPlaceEnv
+        from simscaleai.sim.envs.cloth_fold_env import ClothFoldEnv
         if isinstance(env, JuggleEnv):
             return _scripted_juggle_policy
         if isinstance(env, PickPlaceEnv):
             return _PickPlaceStateMachine()
+        if isinstance(env, ClothFoldEnv):
+            return _ClothFoldStateMachine()
         return _scripted_reach_policy
     else:
         raise ValueError(f"Unknown policy type: {policy_type}")
@@ -320,5 +323,112 @@ class _PickPlaceStateMachine:
                 action[3] = 1.0  # open gripper to release
             else:
                 action[3] = -1.0  # keep closed while lowering
+
+        return np.clip(action, -1.0, 1.0)
+
+
+class _ClothFoldStateMachine:
+    """Scripted cloth-folding policy with 6 phases.
+
+    Phase 0 — Approach:  Move EE above the grasp edge (left edge of cloth)
+    Phase 1 — Descend:   Lower EE onto the grasp edge
+    Phase 2 — Grasp:     Close gripper on cloth edge
+    Phase 3 — Lift:      Lift the grasped edge above the table
+    Phase 4 — Fold:      Sweep the edge over to the target (right) edge
+    Phase 5 — Release:   Open gripper, cloth stays folded
+    """
+
+    def __init__(self) -> None:
+        self._phase = 0
+        self._phase_steps = 0
+
+    def __call__(self, obs: dict[str, np.ndarray]) -> np.ndarray:
+        ee_pos = obs["ee_pos"]
+        grasp_edge = obs["grasp_edge"]
+        target_edge = obs["fold_target"]  # fixed initial target position
+
+        action = np.zeros(4)
+        APPROACH_HEIGHT = 0.10
+        GRASP_STEPS = 10
+        LIFT_HEIGHT = 0.44
+        FOLD_HEIGHT = 0.43
+
+        if self._phase == 0:
+            # Move above the grasp edge (Y<0 side)
+            goal = grasp_edge.copy()
+            goal[2] += APPROACH_HEIGHT
+            direction = goal - ee_pos
+            dist = np.linalg.norm(direction)
+            action[:3] = np.clip(direction * 5.0, -1, 1)
+            action[3] = 1.0  # open
+            if dist < 0.06:
+                self._phase = 1
+                self._phase_steps = 0
+
+        elif self._phase == 1:
+            # Descend onto grasp edge
+            goal = grasp_edge.copy()
+            goal[2] += 0.02
+            direction = goal - ee_pos
+            dist = np.linalg.norm(direction)
+            action[:3] = np.clip(direction * 5.0, -1, 1)
+            action[3] = 1.0  # open
+            if dist < 0.06:
+                self._phase = 2
+                self._phase_steps = 0
+
+        elif self._phase == 2:
+            # Close gripper on cloth
+            action[:3] = 0.0
+            action[3] = -1.0  # close
+            self._phase_steps += 1
+            if self._phase_steps >= GRASP_STEPS:
+                self._phase = 3
+                self._phase_steps = 0
+
+        elif self._phase == 3:
+            # Lift the grasped edge straight up
+            goal = ee_pos.copy()
+            goal[2] = LIFT_HEIGHT
+            direction = goal - ee_pos
+            action[:3] = np.clip(direction * 5.0, -1, 1)
+            action[3] = -1.0  # keep closed
+            if ee_pos[2] > LIFT_HEIGHT - 0.02:
+                self._phase = 4
+                self._phase_steps = 0
+
+        elif self._phase == 4:
+            # Fold: sweep over to above the initial target edge, then lower.
+            # Account for the grasp-to-EE offset so the CLOTH edge arrives
+            # at the target, not just the end-effector.
+            grasp_offset = grasp_edge - ee_pos  # cloth edge relative to EE
+            if self._phase_steps < 100:
+                # First: move horizontally so grasp edge is above target
+                goal = target_edge - grasp_offset
+                goal[2] = FOLD_HEIGHT
+                direction = goal - ee_pos
+                dist_xy = np.linalg.norm(direction[:2])
+                action[:3] = np.clip(direction * 8.0, -1, 1)
+                action[3] = -1.0
+                if dist_xy < 0.03:
+                    self._phase_steps = 100  # trigger lowering
+                else:
+                    self._phase_steps += 1
+            else:
+                # Then: lower to lay cloth down
+                goal = target_edge - grasp_offset
+                goal[2] = target_edge[2] + 0.01
+                direction = goal - ee_pos
+                action[:3] = np.clip(direction * 8.0, -1, 1)
+                action[3] = -1.0
+                if abs(ee_pos[2] - goal[2]) < 0.02:
+                    self._phase = 5
+                    self._phase_steps = 0
+
+        elif self._phase == 5:
+            # Release — open gripper
+            action[:3] = 0.0
+            action[3] = 1.0  # open
+            self._phase_steps += 1
 
         return np.clip(action, -1.0, 1.0)

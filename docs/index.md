@@ -46,6 +46,7 @@ SimScaleAI is a modular robotics AI infrastructure platform that demonstrates th
 | [Training](training.md) | Distributed training, datasets, checkpointing, mixed precision |
 | [Reinforcement Learning](reinforcement-learning.md) | PPO agent, reward functions, closed-loop evaluation |
 | [Data Generation](data-generation.md) | Synthetic dataset pipeline, HDF5 format, scripted policies |
+| [Visualization](visualization.md) | Simulation rendering, dataset plots, training curves |
 | [CLI Reference](cli-reference.md) | All CLI commands with options and examples |
 | [API Reference](api-reference.md) | Complete class/method/function reference |
 | [Architecture](architecture.md) | Design patterns, extension guide, system internals |

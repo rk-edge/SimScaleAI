@@ -249,5 +249,93 @@ def list_models() -> None:
     console.print(table)
 
 
+# ── Visualization Commands ─────────────────────────────────────────────
+
+
+@app.command(name="viz-env")
+def viz_env(
+    env_name: str = typer.Option("reach", help="Environment name"),
+    n_steps: int = typer.Option(20, help="Number of steps to render"),
+    save: str = typer.Option("", help="Save image to this path (PNG)"),
+    seed: int = typer.Option(42, help="Random seed"),
+) -> None:
+    """Visualize simulation environment as a frame grid."""
+    from simscaleai.tools.visualize import render_env_grid
+
+    save_path = save if save else None
+    render_env_grid(env_name=env_name, n_steps=n_steps, seed=seed, save_path=save_path)
+    if save_path:
+        console.print(f"[bold green]Saved to {save_path}[/bold green]")
+
+
+@app.command(name="viz-cameras")
+def viz_cameras(
+    env_name: str = typer.Option("reach", help="Environment name"),
+    save: str = typer.Option("", help="Save image to this path (PNG)"),
+    seed: int = typer.Option(42, help="Random seed"),
+) -> None:
+    """Visualize camera modalities (RGB, depth, segmentation)."""
+    from simscaleai.tools.visualize import render_camera_modalities
+
+    save_path = save if save else None
+    render_camera_modalities(env_name=env_name, seed=seed, save_path=save_path)
+    if save_path:
+        console.print(f"[bold green]Saved to {save_path}[/bold green]")
+
+
+@app.command(name="viz-dataset")
+def viz_dataset(
+    data_path: str = typer.Argument(..., help="Path to HDF5 dataset"),
+    save: str = typer.Option("", help="Save image to this path (PNG)"),
+) -> None:
+    """Visualize statistics of an HDF5 trajectory dataset."""
+    from simscaleai.tools.visualize import plot_dataset_stats
+
+    save_path = save if save else None
+    stats = plot_dataset_stats(data_path=data_path, save_path=save_path)
+
+    table = Table(title="Dataset Statistics")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+    for k, v in stats.items():
+        if isinstance(v, float):
+            table.add_row(k, f"{v:.4f}")
+        elif isinstance(v, list):
+            table.add_row(k, str([f"{x:.3f}" for x in v]))
+        else:
+            table.add_row(k, str(v))
+    console.print(table)
+    if save_path:
+        console.print(f"[bold green]Saved to {save_path}[/bold green]")
+
+
+@app.command(name="viz-trajectory")
+def viz_trajectory(
+    data_path: str = typer.Argument(..., help="Path to HDF5 dataset"),
+    episode: int = typer.Option(0, help="Episode index to plot"),
+    save: str = typer.Option("", help="Save image to this path (PNG)"),
+) -> None:
+    """Plot a single trajectory from a dataset."""
+    from simscaleai.tools.visualize import plot_trajectory
+
+    save_path = save if save else None
+    plot_trajectory(data_path=data_path, episode_idx=episode, save_path=save_path)
+    if save_path:
+        console.print(f"[bold green]Saved to {save_path}[/bold green]")
+
+
+@app.command(name="viz-live")
+def viz_live(
+    env_name: str = typer.Option("reach", help="Environment name"),
+    n_episodes: int = typer.Option(3, help="Number of episodes"),
+    seed: int = typer.Option(42, help="Random seed"),
+) -> None:
+    """Launch interactive MuJoCo viewer with random actions."""
+    from simscaleai.tools.visualize import run_interactive
+
+    console.print(f"[bold]Launching interactive viewer for [cyan]{env_name}[/cyan]...[/bold]")
+    run_interactive(env_name=env_name, n_episodes=n_episodes, seed=seed)
+
+
 if __name__ == "__main__":
     app()

@@ -14,6 +14,11 @@ SimScaleAI provides a command-line interface via the `simscale` command, built w
 | `simscale rl` | Train a PPO agent in simulation |
 | `simscale list-envs` | List all registered environments |
 | `simscale list-models` | List all registered models |
+| `simscale viz-env` | Render a grid of simulation frames |
+| `simscale viz-cameras` | Show RGB, depth, and segmentation views |
+| `simscale viz-dataset` | Plot dataset statistics |
+| `simscale viz-trajectory` | Plot a single episode timeline |
+| `simscale viz-live` | Launch interactive 3D MuJoCo viewer |
 
 ---
 
@@ -243,6 +248,107 @@ simscale list-models
 │ • vla                            │
 ╰──────────────────────────────────╯
 ```
+
+---
+
+## `simscale viz-env`
+
+Render a grid of simulation frames from a rollout.
+
+```bash
+simscale viz-env [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--env-name` | `str` | `"reach"` | Environment name |
+| `--n-steps` | `int` | `10` | Number of steps to render |
+| `--seed` | `int` | `42` | Random seed |
+| `--save` | `str` | `None` | Save image to path |
+
+---
+
+## `simscale viz-cameras`
+
+Show RGB, depth, and segmentation camera outputs side-by-side.
+
+```bash
+simscale viz-cameras [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--env-name` | `str` | `"reach"` | Environment name |
+| `--seed` | `int` | `42` | Random seed |
+| `--save` | `str` | `None` | Save image to path |
+
+---
+
+## `simscale viz-dataset`
+
+Plot dataset statistics — episode lengths, rewards, and action distributions.
+
+```bash
+simscale viz-dataset DATA_PATH [OPTIONS]
+```
+
+### Arguments
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `DATA_PATH` | `str` | Path to HDF5 dataset |
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--save` | `str` | `None` | Save image to path |
+
+---
+
+## `simscale viz-trajectory`
+
+Plot a single episode timeline — observations, actions, and rewards.
+
+```bash
+simscale viz-trajectory DATA_PATH [OPTIONS]
+```
+
+### Arguments
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `DATA_PATH` | `str` | Path to HDF5 dataset |
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--episode` | `int` | `0` | Episode index |
+| `--save` | `str` | `None` | Save image to path |
+
+---
+
+## `simscale viz-live`
+
+Launch the interactive MuJoCo 3D viewer.
+
+```bash
+simscale viz-live [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--env-name` | `str` | `"reach"` | Environment name |
+| `--n-episodes` | `int` | `3` | Episodes to run |
+| `--max-steps` | `int` | `200` | Max steps per episode |
+| `--seed` | `int` | `42` | Random seed |
 
 ---
 

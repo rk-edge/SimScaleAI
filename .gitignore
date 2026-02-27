@@ -37,3 +37,4 @@ simscaleai/sim/assets/*.xml
 # Jupyter
 .ipynb_checkpoints/
 MUJOCO_LOG.TXT
+viz_output/

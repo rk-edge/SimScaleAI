@@ -324,6 +324,26 @@ Systematic evaluation of how policies trained under different conditions transfe
 - Configurable compression (gzip levels 1-9)
 - Generation config saved as JSON for reproducibility
 
+**Architecture:**
+
+```
+  Coordinator (main process)
+      │
+      ├── Worker 0  ──►  shard_00000.h5   (episodes 0–249)
+      ├── Worker 1  ──►  shard_00001.h5   (episodes 250–499)
+      ├── Worker 2  ──►  shard_00002.h5   (episodes 500–749)
+      └── Worker 3  ──►  shard_00003.h5   (episodes 750–999)
+                                │
+                         merge (optional)
+                                │
+                          dataset.h5
+```
+
+Each worker runs its own MuJoCo physics instance — no shared memory,
+no GIL contention, no I/O locks. Episodes are divided evenly with
+remainders distributed round-robin. Shards are self-contained HDF5 files
+marked `complete=True` on finish, enabling fault-tolerant resume.
+
 **Scaling Benchmark** (200 episodes, pick-and-place, Mac Mini M2):
 
 | Workers | Time   | Throughput  | Speedup |

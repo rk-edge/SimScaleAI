@@ -134,9 +134,16 @@ def generate_dataset(
 
 def _get_policy(policy_type: str, env) -> Any:
     """Get a data collection policy function."""
+    from simscaleai.sim.factory import _ENV_REGISTRY
+    env_class = type(env)
+
     if policy_type == "random":
         return lambda obs: env.action_space.sample()
     elif policy_type == "scripted":
+        # Auto-detect env type for scripted policy
+        from simscaleai.sim.envs.juggle_env import JuggleEnv
+        if isinstance(env, JuggleEnv):
+            return _scripted_juggle_policy
         return _scripted_reach_policy
     else:
         raise ValueError(f"Unknown policy type: {policy_type}")
@@ -153,4 +160,59 @@ def _scripted_reach_policy(obs: dict[str, np.ndarray]) -> np.ndarray:
     action = np.zeros(4)
     action[:3] = direction * 0.5  # Scale down
     action[3] = 0.0  # Gripper open
+    return np.clip(action, -1.0, 1.0)
+
+
+def _scripted_juggle_policy(obs: dict[str, np.ndarray]) -> np.ndarray:
+    """Scripted juggling policy — move paddle under lowest ball and toss upward.
+
+    Strategy:
+    1. Find the lowest ball that is falling
+    2. Move paddle under it
+    3. When ball is close, flick upward to toss it
+    4. Alternate between balls to keep them all airborne
+    """
+    ee_pos = obs.get("ee_pos", np.zeros(3))
+    ball_pos = obs.get("ball_pos", np.zeros(9)).reshape(3, 3)
+    ball_vel = obs.get("ball_vel", np.zeros(9)).reshape(3, 3)
+
+    # Find the ball closest to falling onto the paddle
+    # Priority: lowest ball that is descending (negative z velocity)
+    best_ball = 0
+    best_score = float("inf")
+
+    for i in range(3):
+        bz = ball_pos[i, 2]
+        bvz = ball_vel[i, 2]
+        # Score: lower altitude + descending = higher priority
+        score = bz + 0.3 * max(bvz, 0)  # penalize ascending balls
+        if score < best_score:
+            best_score = score
+            best_ball = i
+
+    target_ball_pos = ball_pos[best_ball]
+    target_ball_vel = ball_vel[best_ball]
+
+    action = np.zeros(4)
+
+    # Move paddle horizontally under the target ball
+    xy_error = target_ball_pos[:2] - ee_pos[:2]
+    action[0] = np.clip(xy_error[0] * 5.0, -1, 1)
+    action[1] = np.clip(xy_error[1] * 5.0, -1, 1)
+
+    # Vertical: if ball is close and descending, toss it up
+    z_dist = target_ball_pos[2] - ee_pos[2]
+    if z_dist < 0.1 and target_ball_vel[2] < 0:
+        # Toss upward!
+        action[2] = 1.0
+    elif z_dist > 0.3:
+        # Ball is high, lower paddle to prepare for catch
+        action[2] = -0.3
+    else:
+        # Track ball height loosely
+        action[2] = np.clip(z_dist * 3.0, -0.5, 0.5)
+
+    # Slight paddle tilt toward center to keep balls centered
+    action[3] = np.clip(-xy_error[0] * 2.0, -0.5, 0.5)
+
     return np.clip(action, -1.0, 1.0)

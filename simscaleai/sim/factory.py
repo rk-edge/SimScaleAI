@@ -57,9 +57,11 @@ def _register_defaults() -> None:
     """Register built-in environments."""
     from simscaleai.sim.envs.reach_env import ReachEnv
     from simscaleai.sim.envs.pick_place_env import PickPlaceEnv
+    from simscaleai.sim.envs.juggle_env import JuggleEnv
 
     register_env("reach", ReachEnv)
     register_env("pick_place", PickPlaceEnv)
+    register_env("juggle", JuggleEnv)
 
 
 def list_envs() -> list[str]:

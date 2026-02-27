@@ -91,8 +91,20 @@ class BehaviorCloning(nn.Module):
         """
         obs = batch["observations"]
 
-        # Encode state
-        state = obs["state"]  # (B, state_dim)
+        # Encode state — either a single 'state' key or concat all non-image keys
+        if "state" in obs:
+            state = obs["state"]  # (B, state_dim)
+        else:
+            # Auto-concatenate all non-image observation keys
+            parts = []
+            for k in sorted(obs.keys()):
+                if k == "image":
+                    continue
+                v = obs[k]
+                if v.dim() == 1:
+                    v = v.unsqueeze(0)
+                parts.append(v.float())
+            state = torch.cat(parts, dim=-1)  # (B, total_state_dim)
         state_feat = self.state_encoder(state)
 
         # Encode image if available

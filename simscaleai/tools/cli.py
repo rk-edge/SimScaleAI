@@ -62,7 +62,7 @@ def train(
     # Create dataset
     if dataset:
         from simscaleai.training.data.dataset import TrajectoryDataset
-        train_ds = TrajectoryDataset(dataset, obs_keys=["state"])
+        train_ds = TrajectoryDataset(dataset)
     else:
         console.print("[yellow]No dataset specified — using dummy data[/yellow]")
         use_image = model == "vla"
@@ -74,10 +74,20 @@ def train(
 
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=0)
 
-    # Create model
-    model_kwargs = {}
+    # Create model — infer state_dim from dataset
+    model_kwargs: dict = {}
     if model == "vla":
         model_kwargs = {"image_size": 128, "embed_dim": 128, "num_heads": 4, "num_layers": 2}
+    elif model == "bc" and dataset:
+        # Infer state_dim by loading one sample
+        sample = train_ds[0]
+        obs = sample["observations"]
+        state_dim = sum(v.numel() for k, v in obs.items() if k != "image")
+        action_dim = sample["actions"].shape[-1]
+        use_image = "image" in obs
+        model_kwargs = {"state_dim": state_dim, "action_dim": action_dim, "use_image": use_image}
+        if use_image:
+            model_kwargs["image_size"] = obs["image"].shape[-1]
     net = create_model(model, **model_kwargs)
 
     # Train

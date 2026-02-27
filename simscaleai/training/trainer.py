@@ -337,11 +337,16 @@ class Trainer:
     # ── Helpers ─────────────────────────────────────────────────────────────
 
     def _to_device(self, batch: dict[str, Any]) -> dict[str, Any]:
-        """Move a batch dict to the device."""
-        return {
-            k: v.to(self.device) if torch.is_tensor(v) else v
-            for k, v in batch.items()
-        }
+        """Move a batch dict to the device (handles nested dicts)."""
+        result = {}
+        for k, v in batch.items():
+            if torch.is_tensor(v):
+                result[k] = v.to(self.device)
+            elif isinstance(v, dict):
+                result[k] = self._to_device(v)
+            else:
+                result[k] = v
+        return result
 
     def _setup_logging(self) -> Any:
         """Initialize WandB or TensorBoard logger."""

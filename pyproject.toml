@@ -7,7 +7,7 @@ name = "simscaleai"
 version = "0.1.0"
 description = "End-to-end robotics AI training and simulation platform"
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
 authors = [{ name = "Ravi" }]
 keywords = ["robotics", "simulation", "reinforcement-learning", "foundation-models", "mujoco"]

@@ -123,7 +123,8 @@ SimScaleAI/
 │   │   └── rewards/
 │   │       └── rewards.py      # Composable reward functions
 │   ├── datagen/                # Synthetic data generation
-│   │   └── generator.py        # Dataset generation pipeline
+│   │   ├── generator.py        # Single-process dataset pipeline
+│   │   └── parallel_generator.py # Multi-worker scalable generation
 │   ├── eval/                   # Evaluation & benchmarking
 │   │   └── transfer_benchmark.py # Sim-to-real transfer matrix
 │   └── tools/
@@ -315,16 +316,34 @@ Systematic evaluation of how policies trained under different conditions transfe
 - Composable reward function library
 - Vectorized environment support
 
-### 6. Synthetic Data Generation
-- Automated trajectory recording from simulation
+### 6. Scalable Data Generation
+- **Parallel workers**: N processes × 1 MuJoCo env each, near-linear scaling
+- **Sharded HDF5**: Each worker writes its own shard, optional merge
+- **Resume**: Skip completed shards on re-run (fault-tolerant)
 - Domain randomization for diverse training data
-- HDF5 export with compression
-- Dataset statistics and validation
+- Configurable compression (gzip levels 1-9)
+- Generation config saved as JSON for reproducibility
+
+**Scaling Benchmark** (200 episodes, pick-and-place, Mac Mini M2):
+
+| Workers | Time   | Throughput  | Speedup |
+|---------|--------|-------------|--------:|
+| 1       | 13.7s  | 14.6 ep/s   | 1.0x    |
+| 4       | 3.9s   | 51.8 ep/s   | 3.5x    |
+| 8       | 2.8s   | 72.6 ep/s   | 4.9x    |
+
+```bash
+# Parallel data generation (auto-detects CPU count)
+python -m simscaleai.datagen.parallel_generator \
+    --env pick_place --episodes 10000 --workers 8 \
+    --output-dir data/pick_place_10k --policy scripted
+```
 
 ### 7. CLI Tooling
 - `simscale train` — launch any training experiment
 - `simscale eval` — closed-loop checkpoint evaluation
-- `simscale datagen` — generate datasets at scale
+- `simscale datagen` — generate datasets (single-process)
+- `python -m simscaleai.datagen.parallel_generator` — scalable parallel generation
 - `simscale rl` — RL agent training
 - `simscale list-envs` / `list-models` — discover components
 - `simscale viz-env` / `viz-cameras` / `viz-dataset` / `viz-trajectory` / `viz-live` — visualization

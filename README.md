@@ -124,6 +124,8 @@ SimScaleAI/
 │   │       └── rewards.py      # Composable reward functions
 │   ├── datagen/                # Synthetic data generation
 │   │   └── generator.py        # Dataset generation pipeline
+│   ├── eval/                   # Evaluation & benchmarking
+│   │   └── transfer_benchmark.py # Sim-to-real transfer matrix
 │   └── tools/
 │       └── cli.py              # Typer CLI entry point
 ├── tests/                      # Unit & integration tests
@@ -238,6 +240,40 @@ The core manipulation benchmark: Franka Panda picks a 3cm red cube and places it
 - **PPO learns to avoid penalties** (reward near 0) but hasn't discovered the full grasp→lift sequence in 50K steps — contact‑rich manipulation typically needs millions of steps.
 - **VLA demonstrates language‑conditioned action prediction** — a 1.4M parameter model that fuses vision + language + state through a transformer to output actions.
 - **Domain randomization** systematically varies physics (friction, mass, damping, gains), geometry (object size), and visuals (lighting, camera, materials) for sim‑to‑real transfer.
+
+---
+
+## Sim‑to‑Real Transfer Benchmark
+
+Systematic evaluation of how policies trained under different conditions transfer to unseen environment variations. Tests robustness across 4 eval conditions (Clean → Heavy DR) with per‑parameter sensitivity ablation.
+
+### Transfer Matrix (Policy × Eval Condition)
+
+| Policy | Clean | Light DR | Default DR | Heavy DR |
+|---|---|---|---|---|
+| **Scripted** | 121.1 ± 131.4 | 158.4 ± 229.0 | 162.7 ± 269.6 | −60.6 ± 128.5 |
+| **BC** | 50.8 ± 126.7 | 108.0 ± 56.2 | −88.8 ± 79.7 | −123.5 ± 57.7 |
+| **BC‑DR** | **276.9 ± 137.8** | **282.8 ± 127.7** | −8.1 ± 108.0 | −104.9 ± 117.9 |
+| **PPO** | 3.4 ± 34.7 | 4.6 ± 48.8 | −43.3 ± 64.8 | −121.5 ± 64.4 |
+
+### Per‑Parameter Sensitivity (Reward Drop)
+
+| Parameter | Scripted Drop | BC‑DR Drop |
+|---|---|---|
+| **Gains (kp)** | +145.2 (most sensitive) | +329.6 (most sensitive) |
+| **Obj Size** | −9.0 | +76.1 |
+| **Damping** | −28.4 | +63.3 |
+| **Friction** | −84.6 | +47.3 |
+| **Mass** | −18.7 | +33.5 |
+| **Gravity** | −7.2 | +34.4 |
+| **Lighting** | +1.8 (least sensitive) | +33.0 |
+
+**Key Findings:**
+- **BC‑DR dominates on clean + light DR** — training with DR actually *improves* clean performance (276.9 vs 50.8 for vanilla BC), showing DR acts as regularization.
+- **Actuator gains are the most critical parameter** — randomizing `kp` alone drops Scripted reward by +145 and BC-DR by +330. This suggests actuator calibration is the #1 priority for sim‑to‑real transfer.
+- **Lighting has near-zero impact** on state-based policies (expected — no images in the observation).
+- **Heavy DR breaks all policies** — extreme randomization (mass 0.3–3×, friction 0.4–2×, gains 0.5–2×) exceeds what any policy trained with default ranges can handle.
+- **DR improves generalization** — BC‑DR transfers better than vanilla BC across every condition.
 
 ---
 

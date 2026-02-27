@@ -33,7 +33,7 @@ Built to demonstrate the full stack of robotic AI infrastructure: simulation env
 
 ```bash
 # Clone
-git clone https://github.com/yourusername/SimScaleAI.git
+git clone https://github.com/rk-edge/SimScaleAI.git
 cd SimScaleAI
 
 # Install (with all optional dependencies)
@@ -128,6 +128,64 @@ SimScaleAI/
 └── README.md
 ```
 
+## Visualization
+
+SimScaleAI includes built-in visualization tools accessible via CLI and Python API. See [docs/visualization.md](docs/visualization.md) for the full guide.
+
+### Simulation Environment Rendering
+
+Grid view of a reach-task rollout with the Franka Panda arm:
+
+```bash
+simscale viz-env --env-name reach --n-steps 20 --save env_grid.png
+```
+
+![Environment Grid](docs/images/env_grid.png)
+
+### Camera Modalities
+
+RGB, depth, and segmentation outputs from the wrist camera:
+
+```bash
+simscale viz-cameras --env-name reach --save cameras.png
+```
+
+![Camera Modalities](docs/images/cameras.png)
+
+### Dataset Statistics
+
+Episode length, reward distributions, and per-dimension action histograms from an HDF5 dataset:
+
+```bash
+simscale viz-dataset data/reach.h5 --save dataset_stats.png
+```
+
+![Dataset Statistics](docs/images/dataset_stats.png)
+
+### Trajectory Timeline
+
+Single episode breakdown — observations, actions, and rewards over time:
+
+```bash
+simscale viz-trajectory data/reach.h5 --episode 0 --save trajectory.png
+```
+
+![Trajectory](docs/images/trajectory.png)
+
+### Training Metrics
+
+Loss curves with smoothed overlays from BC/VLA training:
+
+![Training Metrics](docs/images/training.png)
+
+### RL Training Progress
+
+PPO reward curves, episode lengths, and policy/value losses:
+
+![RL Training](docs/images/rl_training.png)
+
+---
+
 ## Key Features
 
 ### 1. Physics Simulation (MuJoCo)
@@ -169,6 +227,7 @@ SimScaleAI/
 - `simscale datagen` — generate datasets at scale
 - `simscale rl` — RL agent training
 - `simscale list-envs` / `list-models` — discover components
+- `simscale viz-env` / `viz-cameras` / `viz-dataset` / `viz-trajectory` / `viz-live` — visualization
 
 ## Configuration
 

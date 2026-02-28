@@ -1,0 +1,8 @@
+{
+  "n_episodes": 20,
+  "mean_reward": 73.59834259008505,
+  "std_reward": 37.713800198825886,
+  "mean_length": 34.0,
+  "mean_distance": -0.39627277846052417,
+  "max_distance": 0.4347110333029547
+}

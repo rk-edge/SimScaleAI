@@ -1,0 +1,108 @@
+21:58:16  HumanoidWalkEnv: obs_dim=49, act_dim=18, curriculum_stage=0
+21:58:16  Starting PPO training | device=cpu | total_steps=1000000
+21:58:16  Curriculum stages: Stand(0) → Walk(1) → Robust(2)
+21:58:21  Steps:   10240/1000000 | Avg reward:    -1.5 | Avg len:    20 | Stage: 0 | PL: 13.4151 | FPS: 1849
+21:58:27  Steps:   20480/1000000 | Avg reward:    18.7 | Avg len:    26 | Stage: 0 | PL: 9.8345 | FPS: 1824
+21:58:33  Steps:   30720/1000000 | Avg reward:     0.5 | Avg len:    25 | Stage: 0 | PL: 0.4021 | FPS: 1814
+21:58:39  Steps:   40960/1000000 | Avg reward:     5.6 | Avg len:    27 | Stage: 0 | PL: 15.3616 | FPS: 1811
+21:58:44  Steps:   51200/1000000 | Avg reward:    -0.4 | Avg len:    26 | Stage: 0 | PL: 1.6312 | FPS: 1811
+21:58:50  Steps:   61440/1000000 | Avg reward:    21.3 | Avg len:    30 | Stage: 0 | PL: 0.3796 | FPS: 1808
+21:58:56  Steps:   71680/1000000 | Avg reward:     8.4 | Avg len:    28 | Stage: 0 | PL: 0.6817 | FPS: 1809
+21:59:01  Steps:   81920/1000000 | Avg reward:     0.2 | Avg len:    26 | Stage: 0 | PL: 0.3074 | FPS: 1811
+21:59:07  Steps:   92160/1000000 | Avg reward:     8.7 | Avg len:    28 | Stage: 0 | PL: 0.3353 | FPS: 1808
+21:59:13  Steps:  102400/1000000 | Avg reward:     1.8 | Avg len:    27 | Stage: 0 | PL: 1.2289 | FPS: 1809
+21:59:18  Steps:  112640/1000000 | Avg reward:    28.8 | Avg len:    33 | Stage: 0 | PL: 0.3122 | FPS: 1810
+21:59:24  Steps:  122880/1000000 | Avg reward:     4.1 | Avg len:    28 | Stage: 0 | PL: 0.3230 | FPS: 1807
+21:59:30  Steps:  133120/1000000 | Avg reward:    17.0 | Avg len:    29 | Stage: 0 | PL: 6.8763 | FPS: 1807
+21:59:35  Steps:  143360/1000000 | Avg reward:     8.6 | Avg len:    28 | Stage: 0 | PL: 0.3088 | FPS: 1806
+21:59:41  Steps:  153600/1000000 | Avg reward:    -6.8 | Avg len:    25 | Stage: 0 | PL: 0.3133 | FPS: 1806
+21:59:47  Steps:  163840/1000000 | Avg reward:     0.6 | Avg len:    24 | Stage: 0 | PL: 0.3226 | FPS: 1806
+21:59:52  Steps:  174080/1000000 | Avg reward:    19.4 | Avg len:    29 | Stage: 0 | PL: 0.6741 | FPS: 1803
+21:59:55  ★ CURRICULUM → Stage 1 (Walk) | avg_reward=43.3
+21:59:58  Steps:  184320/1000000 | Avg reward:     2.9 | Avg len:    26 | Stage: 1 | PL: 0.3086 | FPS: 1798
+22:00:04  Steps:  194560/1000000 | Avg reward:    12.3 | Avg len:    28 | Stage: 1 | PL: 0.2988 | FPS: 1797
+22:00:10  Steps:  204800/1000000 | Avg reward:     9.0 | Avg len:    28 | Stage: 1 | PL: 0.3007 | FPS: 1797
+22:00:16  Steps:  215040/1000000 | Avg reward:    18.3 | Avg len:    29 | Stage: 1 | PL: 0.3035 | FPS: 1796
+22:00:21  Steps:  225280/1000000 | Avg reward:    10.7 | Avg len:    29 | Stage: 1 | PL: 0.3026 | FPS: 1795
+22:00:27  Steps:  235520/1000000 | Avg reward:    15.5 | Avg len:    28 | Stage: 1 | PL: 0.3460 | FPS: 1795
+22:00:33  Steps:  245760/1000000 | Avg reward:     5.4 | Avg len:    26 | Stage: 1 | PL: 0.3084 | FPS: 1794
+22:00:39  Steps:  256000/1000000 | Avg reward:    16.5 | Avg len:    27 | Stage: 1 | PL: 0.3373 | FPS: 1794
+22:00:44  Steps:  266240/1000000 | Avg reward:    25.4 | Avg len:    31 | Stage: 1 | PL: 0.3050 | FPS: 1793
+22:00:50  Steps:  276480/1000000 | Avg reward:    15.5 | Avg len:    29 | Stage: 1 | PL: 0.3078 | FPS: 1792
+22:00:56  Steps:  286720/1000000 | Avg reward:     8.3 | Avg len:    25 | Stage: 1 | PL: 0.3089 | FPS: 1791
+22:01:02  Steps:  296960/1000000 | Avg reward:    28.2 | Avg len:    30 | Stage: 1 | PL: 0.2997 | FPS: 1791
+22:01:08  Steps:  307200/1000000 | Avg reward:    12.4 | Avg len:    26 | Stage: 1 | PL: 0.2906 | FPS: 1790
+22:01:13  Steps:  317440/1000000 | Avg reward:    27.5 | Avg len:    31 | Stage: 1 | PL: 0.3209 | FPS: 1789
+22:01:19  Steps:  327680/1000000 | Avg reward:    37.8 | Avg len:    32 | Stage: 1 | PL: 0.2993 | FPS: 1789
+22:01:25  Steps:  337920/1000000 | Avg reward:    16.9 | Avg len:    27 | Stage: 1 | PL: 0.3068 | FPS: 1788
+22:01:31  Steps:  348160/1000000 | Avg reward:    45.7 | Avg len:    34 | Stage: 1 | PL: 0.3045 | FPS: 1787
+22:01:36  Steps:  358400/1000000 | Avg reward:    19.1 | Avg len:    29 | Stage: 1 | PL: 0.3050 | FPS: 1787
+22:01:42  Steps:  368640/1000000 | Avg reward:    19.6 | Avg len:    29 | Stage: 1 | PL: 0.3043 | FPS: 1787
+22:01:48  Steps:  378880/1000000 | Avg reward:    23.9 | Avg len:    32 | Stage: 1 | PL: 0.2877 | FPS: 1786
+22:01:54  Steps:  389120/1000000 | Avg reward:    15.2 | Avg len:    28 | Stage: 1 | PL: 0.2894 | FPS: 1786
+22:02:00  Steps:  399360/1000000 | Avg reward:    22.6 | Avg len:    30 | Stage: 1 | PL: 0.3002 | FPS: 1785
+22:02:05  Steps:  409600/1000000 | Avg reward:    17.0 | Avg len:    29 | Stage: 1 | PL: 0.2931 | FPS: 1784
+22:02:11  Steps:  419840/1000000 | Avg reward:     3.4 | Avg len:    27 | Stage: 1 | PL: 0.2863 | FPS: 1784
+22:02:17  Steps:  430080/1000000 | Avg reward:    -2.8 | Avg len:    26 | Stage: 1 | PL: 0.2990 | FPS: 1783
+22:02:23  Steps:  440320/1000000 | Avg reward:    14.0 | Avg len:    30 | Stage: 1 | PL: 0.3351 | FPS: 1783
+22:02:29  Steps:  450560/1000000 | Avg reward:    12.2 | Avg len:    30 | Stage: 1 | PL: 0.3039 | FPS: 1782
+22:02:35  Steps:  460800/1000000 | Avg reward:     1.2 | Avg len:    27 | Stage: 1 | PL: 0.2946 | FPS: 1782
+22:02:40  Steps:  471040/1000000 | Avg reward:     0.2 | Avg len:    26 | Stage: 1 | PL: 0.2988 | FPS: 1781
+22:02:46  Steps:  481280/1000000 | Avg reward:    19.3 | Avg len:    30 | Stage: 1 | PL: 0.2947 | FPS: 1781
+22:02:52  Steps:  491520/1000000 | Avg reward:    30.5 | Avg len:    33 | Stage: 1 | PL: 0.3055 | FPS: 1780
+22:02:58  Steps:  501760/1000000 | Avg reward:    21.4 | Avg len:    30 | Stage: 1 | PL: 0.3081 | FPS: 1780
+22:03:04  Steps:  512000/1000000 | Avg reward:    11.7 | Avg len:    29 | Stage: 1 | PL: 0.3024 | FPS: 1779
+22:03:10  Steps:  522240/1000000 | Avg reward:    40.4 | Avg len:    35 | Stage: 1 | PL: 0.3017 | FPS: 1779
+22:03:15  Steps:  532480/1000000 | Avg reward:    14.8 | Avg len:    28 | Stage: 1 | PL: 0.4375 | FPS: 1778
+22:03:21  Steps:  542720/1000000 | Avg reward:    17.0 | Avg len:    30 | Stage: 1 | PL: 0.2950 | FPS: 1778
+22:03:27  Steps:  552960/1000000 | Avg reward:    21.8 | Avg len:    29 | Stage: 1 | PL: 0.3024 | FPS: 1778
+22:03:33  Steps:  563200/1000000 | Avg reward:    10.8 | Avg len:    26 | Stage: 1 | PL: 0.3098 | FPS: 1777
+22:03:39  Steps:  573440/1000000 | Avg reward:    13.2 | Avg len:    29 | Stage: 1 | PL: 0.2982 | FPS: 1777
+22:03:44  Steps:  583680/1000000 | Avg reward:    14.1 | Avg len:    30 | Stage: 1 | PL: 0.3003 | FPS: 1777
+22:03:50  Steps:  593920/1000000 | Avg reward:     7.8 | Avg len:    26 | Stage: 1 | PL: 0.3156 | FPS: 1776
+22:03:56  Steps:  604160/1000000 | Avg reward:     9.2 | Avg len:    28 | Stage: 1 | PL: 0.3089 | FPS: 1776
+22:04:02  Steps:  614400/1000000 | Avg reward:     5.7 | Avg len:    27 | Stage: 1 | PL: 0.2982 | FPS: 1776
+22:04:08  Steps:  624640/1000000 | Avg reward:    14.8 | Avg len:    28 | Stage: 1 | PL: 0.3044 | FPS: 1776
+22:04:13  Steps:  634880/1000000 | Avg reward:    15.9 | Avg len:    28 | Stage: 1 | PL: 0.3047 | FPS: 1776
+22:04:19  Steps:  645120/1000000 | Avg reward:    -2.8 | Avg len:    24 | Stage: 1 | PL: 3.9013 | FPS: 1776
+22:04:25  Steps:  655360/1000000 | Avg reward:   -11.3 | Avg len:    22 | Stage: 1 | PL: 0.3035 | FPS: 1775
+22:04:31  Steps:  665600/1000000 | Avg reward:     0.5 | Avg len:    26 | Stage: 1 | PL: 0.2977 | FPS: 1775
+22:04:37  Steps:  675840/1000000 | Avg reward:     9.4 | Avg len:    27 | Stage: 1 | PL: 0.3097 | FPS: 1775
+22:04:42  Steps:  686080/1000000 | Avg reward:    -5.4 | Avg len:    25 | Stage: 1 | PL: 0.2860 | FPS: 1775
+22:04:48  Steps:  696320/1000000 | Avg reward:     3.5 | Avg len:    26 | Stage: 1 | PL: 0.2955 | FPS: 1775
+22:04:54  Steps:  706560/1000000 | Avg reward:    -4.7 | Avg len:    24 | Stage: 1 | PL: 0.3028 | FPS: 1775
+22:05:00  Steps:  716800/1000000 | Avg reward:    -1.9 | Avg len:    27 | Stage: 1 | PL: 0.3032 | FPS: 1775
+22:05:05  Steps:  727040/1000000 | Avg reward:     8.7 | Avg len:    24 | Stage: 1 | PL: 0.2990 | FPS: 1775
+22:05:11  Steps:  737280/1000000 | Avg reward:     0.2 | Avg len:    26 | Stage: 1 | PL: 1.3826 | FPS: 1775
+22:05:17  Steps:  747520/1000000 | Avg reward:     3.4 | Avg len:    27 | Stage: 1 | PL: 7.2073 | FPS: 1775
+22:05:23  Steps:  757760/1000000 | Avg reward:     4.5 | Avg len:    26 | Stage: 1 | PL: 0.3143 | FPS: 1775
+22:05:28  Steps:  768000/1000000 | Avg reward:    -9.3 | Avg len:    25 | Stage: 1 | PL: 0.2870 | FPS: 1775
+22:05:34  Steps:  778240/1000000 | Avg reward:    24.5 | Avg len:    32 | Stage: 1 | PL: 0.2992 | FPS: 1776
+22:05:40  Steps:  788480/1000000 | Avg reward:    13.3 | Avg len:    28 | Stage: 1 | PL: 0.3118 | FPS: 1776
+22:05:46  Steps:  798720/1000000 | Avg reward:     1.8 | Avg len:    26 | Stage: 1 | PL: 0.3028 | FPS: 1776
+22:05:51  Steps:  808960/1000000 | Avg reward:    18.8 | Avg len:    33 | Stage: 1 | PL: 0.3076 | FPS: 1776
+22:05:57  Steps:  819200/1000000 | Avg reward:     6.5 | Avg len:    27 | Stage: 1 | PL: 0.2988 | FPS: 1776
+22:06:03  Steps:  829440/1000000 | Avg reward:    16.5 | Avg len:    30 | Stage: 1 | PL: 0.3064 | FPS: 1776
+22:06:09  Steps:  839680/1000000 | Avg reward:    -1.4 | Avg len:    29 | Stage: 1 | PL: 0.3498 | FPS: 1777
+22:06:14  Steps:  849920/1000000 | Avg reward:     3.3 | Avg len:    29 | Stage: 1 | PL: 0.3088 | FPS: 1777
+22:06:20  Steps:  860160/1000000 | Avg reward:   -10.8 | Avg len:    24 | Stage: 1 | PL: 0.3053 | FPS: 1777
+22:06:26  Steps:  870400/1000000 | Avg reward:   -11.5 | Avg len:    24 | Stage: 1 | PL: 0.3159 | FPS: 1777
+22:06:31  Steps:  880640/1000000 | Avg reward:    15.9 | Avg len:    30 | Stage: 1 | PL: 0.3143 | FPS: 1778
+22:06:37  Steps:  890880/1000000 | Avg reward:    -6.2 | Avg len:    22 | Stage: 1 | PL: 0.3017 | FPS: 1778
+22:06:43  Steps:  901120/1000000 | Avg reward:    10.5 | Avg len:    28 | Stage: 1 | PL: 0.2978 | FPS: 1777
+22:06:49  Steps:  911360/1000000 | Avg reward:   -12.1 | Avg len:    23 | Stage: 1 | PL: 0.3086 | FPS: 1776
+22:06:55  Steps:  921600/1000000 | Avg reward:     1.1 | Avg len:    27 | Stage: 1 | PL: 0.3045 | FPS: 1777
+22:07:00  Steps:  931840/1000000 | Avg reward:   -17.3 | Avg len:    22 | Stage: 1 | PL: 0.2975 | FPS: 1777
+22:07:06  Steps:  942080/1000000 | Avg reward:    -2.1 | Avg len:    25 | Stage: 1 | PL: 0.3759 | FPS: 1778
+22:07:12  Steps:  952320/1000000 | Avg reward:     8.8 | Avg len:    28 | Stage: 1 | PL: 0.3125 | FPS: 1778
+22:07:17  Steps:  962560/1000000 | Avg reward:    20.9 | Avg len:    32 | Stage: 1 | PL: 0.3067 | FPS: 1778
+22:07:23  Steps:  972800/1000000 | Avg reward:   -10.3 | Avg len:    28 | Stage: 1 | PL: 0.3046 | FPS: 1778
+22:07:29  Steps:  983040/1000000 | Avg reward:   -12.0 | Avg len:    26 | Stage: 1 | PL: 0.3291 | FPS: 1779
+22:09:32  Steps:  993280/1000000 | Avg reward:    -6.2 | Avg len:    26 | Stage: 1 | PL: 0.3046 | FPS: 1778
+22:09:37  Training complete in 563.4s (1778 FPS)
+22:09:37  Model saved → outputs/humanoid_walk/humanoid_ppo.pt
+22:09:37  Metrics saved → outputs/humanoid_walk/train_metrics.json
+22:09:37  Training curves saved → outputs/humanoid_walk/training_curves.png
+22:09:37  HumanoidWalkEnv: obs_dim=49, act_dim=18, curriculum_stage=1
+22:09:38  Eval (20 eps): reward=73.6±37.7 | steps=34 | dist=-0.40m
+22:09:38  Eval results saved → outputs/humanoid_walk/eval_results.json

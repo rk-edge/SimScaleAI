@@ -1,0 +1,140 @@
+<mujoco model="panda_juggle">
+  <compiler angle="radian" meshdir="." autolimits="true"/>
+
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast">
+    <flag contact="enable"/>
+  </option>
+
+  <default>
+    <default class="panda">
+      <joint damping="1.0" armature="0.1"/>
+      <geom condim="4" friction="1 0.5 0.01" margin="0.001"/>
+      <position kp="200" kv="30"/>
+    </default>
+    <default class="ball">
+      <geom type="sphere" size="0.025" mass="0.05" condim="4"
+            friction="0.8 0.3 0.01" solref="0.01 1" solimp="0.9 0.95 0.001"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture type="2d" name="grid" builtin="checker" rgb1="0.8 0.8 0.8" rgb2="0.6 0.6 0.6"
+             width="512" height="512"/>
+    <material name="grid_mat" texture="grid" texrepeat="4 4" reflectance="0.1"/>
+    <material name="robot_mat" rgba="0.7 0.7 0.7 1"/>
+    <material name="paddle_mat" rgba="0.3 0.3 0.3 1"/>
+    <material name="ball_red" rgba="1.0 0.2 0.2 1"/>
+    <material name="ball_green" rgba="0.2 0.8 0.2 1"/>
+    <material name="ball_blue" rgba="0.2 0.3 1.0 1"/>
+  </asset>
+
+  <worldbody>
+    <!-- Floor -->
+    <geom name="floor" type="plane" size="2 2 0.01" material="grid_mat"/>
+
+    <!-- Table -->
+    <body name="table" pos="0.5 0 0.2">
+      <geom type="box" size="0.4 0.5 0.2" rgba="0.6 0.4 0.2 1" mass="100"/>
+    </body>
+
+    <!-- Simplified Panda Arm (7-DOF) -->
+    <body name="link0" pos="0.1 0 0.4" childclass="panda">
+      <geom type="cylinder" size="0.06 0.05" rgba="0.9 0.9 0.9 1" mass="2"/>
+
+      <body name="link1" pos="0 0 0.05">
+        <joint name="j1" type="hinge" axis="0 0 1" range="-2.9 2.9"/>
+        <geom type="capsule" fromto="0 0 0 0 0 0.15" size="0.05" material="robot_mat" mass="2"/>
+
+        <body name="link2" pos="0 0 0.15">
+          <joint name="j2" type="hinge" axis="0 1 0" range="-1.76 1.76"/>
+          <geom type="capsule" fromto="0 0 0 0 0 0.15" size="0.04" material="robot_mat" mass="2"/>
+
+          <body name="link3" pos="0 0 0.15">
+            <joint name="j3" type="hinge" axis="0 0 1" range="-2.9 2.9"/>
+            <geom type="capsule" fromto="0 0 0 0 0 0.12" size="0.04" material="robot_mat" mass="1.5"/>
+
+            <body name="link4" pos="0 0 0.12">
+              <joint name="j4" type="hinge" axis="0 -1 0" range="-3.07 0.07"/>
+              <geom type="capsule" fromto="0 0 0 0 0 0.12" size="0.035" material="robot_mat" mass="1.5"/>
+
+              <body name="link5" pos="0 0 0.12">
+                <joint name="j5" type="hinge" axis="0 0 1" range="-2.9 2.9"/>
+                <geom type="capsule" fromto="0 0 0 0 0 0.1" size="0.035" material="robot_mat" mass="1"/>
+
+                <body name="link6" pos="0 0 0.1">
+                  <joint name="j6" type="hinge" axis="0 1 0" range="-0.02 3.75"/>
+                  <geom type="capsule" fromto="0 0 0 0 0 0.08" size="0.03" material="robot_mat" mass="1"/>
+
+                  <body name="link7" pos="0 0 0.08">
+                    <joint name="j7" type="hinge" axis="0 0 1" range="-2.9 2.9"/>
+                    <geom type="cylinder" size="0.04 0.02" material="robot_mat" mass="0.5"/>
+
+                    <!-- Paddle (flat disc for juggling) -->
+                    <body name="paddle" pos="0 0 0.04">
+                      <geom name="paddle_geom" type="cylinder" size="0.08 0.005"
+                            material="paddle_mat" mass="0.2"
+                            friction="1.5 0.5 0.01" condim="4"/>
+                      <!-- Slight rim to help catch -->
+                      <geom name="rim1" type="capsule" fromto="-0.07 0 0.005 0.07 0 0.005"
+                            size="0.005" material="paddle_mat" mass="0.01"/>
+                      <geom name="rim2" type="capsule" fromto="0 -0.07 0.005 0 0.07 0.005"
+                            size="0.005" material="paddle_mat" mass="0.01"/>
+                      <site name="paddle_site" pos="0 0 0.01" size="0.01" rgba="1 1 0 1"/>
+                    </body>
+
+                    <!-- Gripper actuators kept for compatibility -->
+                    <body name="left_finger" pos="0 0.02 0.04">
+                      <joint name="finger_left" type="slide" axis="0 1 0" range="0 0.04"/>
+                      <geom type="box" size="0.001 0.001 0.001" rgba="0.5 0.5 0.5 0" mass="0.01" contype="0" conaffinity="0"/>
+                    </body>
+                    <body name="right_finger" pos="0 -0.02 0.04">
+                      <joint name="finger_right" type="slide" axis="0 -1 0" range="0 0.04"/>
+                      <geom type="box" size="0.001 0.001 0.001" rgba="0.5 0.5 0.5 0" mass="0.01" contype="0" conaffinity="0"/>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <!-- Three juggling balls (free joints = 6 DOF each) -->
+    <body name="ball_1" pos="0.35 0.0 0.90">
+      <joint name="ball_1_free" type="free"/>
+      <geom name="ball_1_geom" class="ball" material="ball_red"/>
+    </body>
+
+    <body name="ball_2" pos="0.38 0.02 0.95">
+      <joint name="ball_2_free" type="free"/>
+      <geom name="ball_2_geom" class="ball" material="ball_green"/>
+    </body>
+
+    <body name="ball_3" pos="0.32 0.02 1.00">
+      <joint name="ball_3_free" type="free"/>
+      <geom name="ball_3_geom" class="ball" material="ball_blue"/>
+    </body>
+
+    <!-- Lights -->
+    <light name="top_light" pos="0.5 0 2.0" dir="0 0 -1" diffuse="0.9 0.9 0.9" castshadow="true"/>
+    <light name="side_light" pos="0 1.5 1.5" dir="0 -0.5 -0.5" diffuse="0.4 0.4 0.4"/>
+
+    <!-- Cameras -->
+    <camera name="wrist_cam" pos="0.8 0 1.0" xyaxes="0 1 0 -0.5 0 0.5" fovy="70"/>
+    <camera name="front_cam" pos="1.5 0 0.9" xyaxes="0 1 0 -0.3 0 0.8" fovy="60"/>
+    <camera name="side_cam" pos="0.4 1.2 0.9" xyaxes="-1 0 0 0 -0.3 0.8" fovy="60"/>
+  </worldbody>
+
+  <actuator>
+    <position class="panda" name="act_j1" joint="j1"/>
+    <position class="panda" name="act_j2" joint="j2"/>
+    <position class="panda" name="act_j3" joint="j3"/>
+    <position class="panda" name="act_j4" joint="j4"/>
+    <position class="panda" name="act_j5" joint="j5"/>
+    <position class="panda" name="act_j6" joint="j6"/>
+    <position class="panda" name="act_j7" joint="j7"/>
+    <position name="act_finger_left" joint="finger_left" kp="50"/>
+    <position name="act_finger_right" joint="finger_right" kp="50"/>
+  </actuator>
+</mujoco>

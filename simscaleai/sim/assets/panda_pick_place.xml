@@ -1,0 +1,103 @@
+<mujoco model="panda_pick_place">
+  <compiler angle="radian" meshdir="." autolimits="true"/>
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast"/>
+
+  <default>
+    <default class="panda">
+      <joint damping="1.0" armature="0.1"/>
+      <geom condim="4" friction="1 0.5 0.01" margin="0.001"/>
+      <position kp="100" kv="20"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture type="2d" name="grid" builtin="checker" rgb1="0.8 0.8 0.8" rgb2="0.6 0.6 0.6"
+             width="512" height="512"/>
+    <material name="grid_mat" texture="grid" texrepeat="4 4" reflectance="0.1"/>
+    <material name="robot_mat" rgba="0.7 0.7 0.7 1"/>
+    <material name="object_mat" rgba="0.8 0.2 0.2 1"/>
+    <material name="target_mat" rgba="0.2 0.8 0.2 0.3"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="2 2 0.01" material="grid_mat"/>
+
+    <body name="table" pos="0.5 0 0.2">
+      <geom type="box" size="0.4 0.5 0.2" rgba="0.6 0.4 0.2 1" mass="100"/>
+    </body>
+
+    <!-- Panda Arm (same as reach) -->
+    <body name="link0" pos="0.1 0 0.4" childclass="panda">
+      <geom type="cylinder" size="0.06 0.05" rgba="0.9 0.9 0.9 1" mass="2"/>
+      <body name="link1" pos="0 0 0.05">
+        <joint name="j1" type="hinge" axis="0 0 1" range="-2.9 2.9"/>
+        <geom type="capsule" fromto="0 0 0 0 0 0.15" size="0.05" material="robot_mat" mass="2"/>
+        <body name="link2" pos="0 0 0.15">
+          <joint name="j2" type="hinge" axis="0 1 0" range="-1.76 1.76"/>
+          <geom type="capsule" fromto="0 0 0 0 0 0.15" size="0.04" material="robot_mat" mass="2"/>
+          <body name="link3" pos="0 0 0.15">
+            <joint name="j3" type="hinge" axis="0 0 1" range="-2.9 2.9"/>
+            <geom type="capsule" fromto="0 0 0 0 0 0.12" size="0.04" material="robot_mat" mass="1.5"/>
+            <body name="link4" pos="0 0 0.12">
+              <joint name="j4" type="hinge" axis="0 -1 0" range="-3.07 0.07"/>
+              <geom type="capsule" fromto="0 0 0 0 0 0.12" size="0.035" material="robot_mat" mass="1.5"/>
+              <body name="link5" pos="0 0 0.12">
+                <joint name="j5" type="hinge" axis="0 0 1" range="-2.9 2.9"/>
+                <geom type="capsule" fromto="0 0 0 0 0 0.1" size="0.035" material="robot_mat" mass="1"/>
+                <body name="link6" pos="0 0 0.1">
+                  <joint name="j6" type="hinge" axis="0 1 0" range="-0.02 3.75"/>
+                  <geom type="capsule" fromto="0 0 0 0 0 0.08" size="0.03" material="robot_mat" mass="1"/>
+                  <body name="link7" pos="0 0 0.08">
+                    <joint name="j7" type="hinge" axis="0 0 1" range="-2.9 2.9"/>
+                    <geom type="cylinder" size="0.04 0.02" material="robot_mat" mass="0.5"/>
+                    <site name="ee_site" pos="0 0 0.04" size="0.01" rgba="1 0 0 1"/>
+                    <body name="left_finger" pos="0 0.02 0.04">
+                      <joint name="finger_left" type="slide" axis="0 1 0" range="0 0.04"/>
+                      <geom type="box" size="0.01 0.005 0.03" rgba="0.5 0.5 0.5 1" mass="0.1"
+                            friction="2 0.5 0.01"/>
+                    </body>
+                    <body name="right_finger" pos="0 -0.02 0.04">
+                      <joint name="finger_right" type="slide" axis="0 -1 0" range="0 0.04"/>
+                      <geom type="box" size="0.01 0.005 0.03" rgba="0.5 0.5 0.5 1" mass="0.1"
+                            friction="2 0.5 0.01"/>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <!-- Manipulable object -->
+    <body name="object" pos="0.5 0 0.45">
+      <freejoint name="object_joint"/>
+      <geom type="box" size="0.025 0.025 0.025" material="object_mat" mass="0.1"
+            friction="1.5 0.5 0.01" condim="4"/>
+    </body>
+
+    <!-- Placement target (visual only) -->
+    <body name="place_target" pos="0.5 0.2 0.45">
+      <geom type="box" size="0.03 0.03 0.005" material="target_mat" contype="0" conaffinity="0"/>
+    </body>
+
+    <light name="top_light" pos="0.5 0 1.5" dir="0 0 -1" diffuse="0.8 0.8 0.8" castshadow="true"/>
+    <light name="side_light" pos="0 1 1" dir="0 -0.5 -0.5" diffuse="0.5 0.5 0.5"/>
+
+    <camera name="wrist_cam" pos="0.8 0 0.8" xyaxes="0 1 0 -0.5 0 0.5" fovy="60"/>
+    <camera name="front_cam" pos="1.5 0 0.8" xyaxes="0 1 0 -0.5 0 0.8" fovy="60"/>
+  </worldbody>
+
+  <actuator>
+    <position class="panda" name="act_j1" joint="j1"/>
+    <position class="panda" name="act_j2" joint="j2"/>
+    <position class="panda" name="act_j3" joint="j3"/>
+    <position class="panda" name="act_j4" joint="j4"/>
+    <position class="panda" name="act_j5" joint="j5"/>
+    <position class="panda" name="act_j6" joint="j6"/>
+    <position class="panda" name="act_j7" joint="j7"/>
+    <position name="act_finger_left" joint="finger_left" kp="50"/>
+    <position name="act_finger_right" joint="finger_right" kp="50"/>
+  </actuator>
+</mujoco>

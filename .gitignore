@@ -31,8 +31,8 @@ wandb/
 runs/
 eval_videos/
 
-# MuJoCo assets (auto-generated)
-simscaleai/sim/assets/*.xml
+# MuJoCo assets (auto-generated, but track the source XMLs)
+!simscaleai/sim/assets/*.xml
 
 # Jupyter
 .ipynb_checkpoints/

@@ -18,7 +18,9 @@ Built to demonstrate the full stack of robotic AI infrastructure: simulation env
 │  • PickPlace │  • AMP/FSDP   │  • Vision-Language-Action │
 │  • Juggle    │  • Checkpoint  │  • Diffusion Policy Head │
 │  • ClothFold │  • WandB log  │  • Model Registry        │
-│  • Domain    │  • VLA train  │                          │
+│  • Humanoid  │  • VLA train  │                          │
+│    Walk      │               │                          │
+│  • Domain    │               │                          │
 │    Randomize │               │                          │
 ├──────────────┼───────────────┼───────────────────────────┤
 │      RL Pipeline             │   Synthetic Data Gen      │
@@ -104,7 +106,9 @@ SimScaleAI/
 │   │   └── envs/
 │   │       ├── reach_env.py    # Reach task (move EE to target)
 │   │       ├── pick_place_env.py # Pick-and-place manipulation
-│   │       └── juggle_env.py   # 3-ball juggling
+│   │       ├── juggle_env.py   # 3-ball juggling
+│   │       ├── cloth_fold_env.py # Deformable cloth folding
+│   │       └── humanoid_walk_env.py # Bipedal locomotion + curriculum
 │   ├── training/               # ML training infrastructure
 │   │   ├── trainer.py          # Distributed training loop (DDP/AMP)
 │   │   ├── train_vla.py        # Language-conditioned VLA pipeline
@@ -317,12 +321,89 @@ Training: 100 expert demos (7,700 timesteps) → 5,000 BC steps on MPS → 222-d
 
 ---
 
+## Humanoid Locomotion — PPO + Curriculum Learning
+
+**Bipedal humanoid walking** using a custom 21-DOF MJCF model trained from scratch with PPO and automatic curriculum advancement.
+
+### Humanoid Model
+
+Custom-authored MuJoCo MJCF with:
+- **21 actuated joints**: 3-DOF hips, 1-DOF knees, 2-DOF ankles, 2-DOF shoulders, 1-DOF elbows (× 2 limbs)
+- **Free-floating torso** (6-DOF freejoint) — total 25 qpos, 24 qvel
+- **Torque-controlled motors** (gear ratio 100, ctrl range [-1, 1])
+- **Sensors**: foot contact (touch), torso IMU (gyro + accelerometer)
+
+### Observation Space (49-dim)
+
+| Component | Dimensions | Description |
+|-----------|-----------|-------------|
+| Torso height | 1 | Center-of-mass z position |
+| Torso orientation | 4 | Quaternion (w,x,y,z) |
+| Joint positions | 18 | All actuated joint angles |
+| Torso linear velocity | 3 | CoM velocity (x,y,z) |
+| Torso angular velocity | 3 | Gyroscope reading |
+| Joint velocities | 18 | Actuated joint angular velocities |
+| Foot contacts | 2 | Binary ground-contact flags |
+
+### Reward Shaping
+
+```
+reward = forward_vel × 1.25 × stage_scale
+       + alive_bonus (5.0/step)
+       + height_bonus (2.0 × min(z/1.3, 1))
+       − energy_cost (0.01 × |ctrl·vel|)
+       − ctrl_cost (0.001 × |ctrl|²)
+       + fall_penalty (−100 on termination)
+```
+
+### Curriculum Learning
+
+Automatic stage progression based on 20-episode rolling reward average:
+
+| Stage | Objective | Forward Reward Scale | External Forces | Advancement Threshold |
+|-------|-----------|---------------------|-----------------|----------------------|
+| **0 — Stand** | Learn to stay upright | 0.1× | None | avg reward ≥ 40 |
+| **1 — Walk** | Walk forward | 1.0× | None | avg reward ≥ 120 |
+| **2 — Robust** | Walk under perturbation | 1.0× | Random pushes every 100 steps | — |
+
+### Training Results (1M steps, CPU, 563s)
+
+| Metric | Value |
+|--------|-------|
+| **Training FPS** | 1,778 steps/s |
+| **Curriculum 0→1** | Advanced at step 174K (avg reward 43.3) |
+| **Eval reward** | 73.6 ± 37.7 |
+| **Eval episode length** | 34 steps (0.68s upright) |
+| **Random baseline** | 17 steps (0.34s) — **2× improvement** |
+| **Max episode length** | 44 steps |
+
+**Training curves:**
+
+![Humanoid Training](outputs/humanoid_walk/training_curves.png)
+
+**Key insights:**
+- **Curriculum works**: Agent learns Stage 0 (standing) in 174K steps, then transitions to Stage 1 (walking) automatically.
+- **Reward shaping is critical**: Large alive bonus (5.0/step) + fall penalty (−100) prevents "die-fast" degenerate strategies common in locomotion RL.
+- **CPU > MPS for small models**: 1,778 FPS on CPU vs 223 FPS on MPS — the MPS kernel launch overhead dominates for lightweight networks (49→256→256→18).
+- **Humanoid locomotion is hard**: Even with 1M steps, the agent balances for ~0.7s. Production humanoid controllers (DeepMind, Agility) use 10B+ steps with massively parallel GPU simulation.
+
+```bash
+# Train humanoid locomotion
+python -m scripts.train_humanoid_walk --total-steps 1000000 --device cpu
+
+# Evaluate
+python -m scripts.train_humanoid_walk --eval-only
+```
+
+---
+
 ## Key Features
 
 ### 1. Physics Simulation (MuJoCo)
-- Gymnasium-compatible environments for Franka Panda arm
-- Reach, pick-and-place, 3-ball juggling, and **cloth folding** (deformable) tasks
+- Gymnasium-compatible environments for Franka Panda arm and humanoid robot
+- Reach, pick-and-place, 3-ball juggling, **cloth folding** (deformable), and **bipedal humanoid walking**
 - MuJoCo 3.x `<flexcomp>` for real-time FEM cloth simulation (64 vertices, 192 DOFs)
+- Custom 21-DOF humanoid MJCF with torque control, foot contact sensors, and IMU
 - Damped pseudoinverse IK with kinematic grasp lock
 - Multi-camera rendering (RGB, depth, segmentation)
 - Configurable via YAML — swap tasks without code changes
@@ -352,6 +433,8 @@ Training: 100 expert demos (7,700 timesteps) → 5,000 BC steps on MPS → 222-d
 
 ### 5. Reinforcement Learning
 - PPO agent with Generalized Advantage Estimation (GAE)
+- **Curriculum learning**: automatic stage progression (stand → walk → robust)
+- Reward shaping library with alive bonus, energy cost, fall penalty
 - Closed-loop evaluation (model controls robot in real-time)
 - Composable reward function library
 - Vectorized environment support

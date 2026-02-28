@@ -202,6 +202,10 @@ PPO reward curves, episode lengths, and policy/value losses:
 
 A 3-ball juggling task using the Franka Panda arm with a flat paddle. Three policies were trained and evaluated over 20 episodes each:
 
+![Juggle Environment](docs/images/juggle_env_grid.png)
+
+![Juggle Trajectory](docs/images/juggle_trajectory.png)
+
 | Metric | Scripted (Expert) | BC (Imitation) | PPO (RL) |
 |---|---|---|---|
 | **Mean Reward** | 95.9 ± 61.3 | 95.7 ± 61.0 | 94.9 ± 61.2 |
@@ -221,6 +225,10 @@ A 3-ball juggling task using the Franka Panda arm with a flat paddle. Three poli
 
 The core manipulation benchmark: Franka Panda picks a 3cm red cube and places it at a randomized green target, using damped pseudoinverse IK and a kinematic grasp lock.
 
+![Pick-and-Place Multi-View](docs/images/pick_place_multi_view.png)
+
+![Pick-and-Place Rollout](docs/images/pick_place_rollout_grid.png)
+
 ### Training Summary
 
 | Model | Data | Steps | Loss (start → end) |
@@ -239,6 +247,10 @@ The core manipulation benchmark: Franka Panda picks a 3cm red cube and places it
 | **BC‑DR** (domain‑randomized, eval on DR env) | −35.4 ± 99.3 | 0.0% | 300 |
 | **PPO** (RL, 50K steps) | −7.6 ± 40.1 | 0.0% | 300 |
 | **VLA** (language‑conditioned) | −46.7 ± 50.0 | 0.0% | 300 |
+
+![Pick-and-Place Reward Curves](docs/images/pick_place_reward_curve.png)
+
+![Pick-and-Place Camera Modalities](docs/images/pick_place_cameras.png)
 
 **Takeaways:**
 - **Scripted policy achieves 20% success** — pick‑and‑place is significantly harder than reaching, requiring precise multi‑phase coordination (approach → descend → grasp → lift → transport → place).
@@ -281,11 +293,19 @@ Systematic evaluation of how policies trained under different conditions transfe
 - **Heavy DR breaks all policies** — extreme randomization (mass 0.3–3×, friction 0.4–2×, gains 0.5–2×) exceeds what any policy trained with default ranges can handle.
 - **DR improves generalization** — BC‑DR transfers better than vanilla BC across every condition.
 
+![Transfer Heatmap](docs/images/transfer_heatmap.png)
+
+![Ablation Sensitivity — Scripted](docs/images/ablation_sensitivity.png)
+
+![Ablation Sensitivity — BC-DR](docs/images/ablation_sensitivity_bcdr.png)
+
 ---
 
 ## Deformable Object Manipulation: Cloth Folding
 
 **Genuinely frontier research territory**: autonomous cloth folding with learned policies on physically-accurate deformable simulation.
+
+![Cloth Fold Views](docs/images/cloth_fold_views.png)
 
 ### Physics
 
@@ -306,6 +326,10 @@ Pick up one edge of a 17.5cm × 17.5cm cloth and fold it onto the opposite edge:
 | 4. Fold | Sweep grasped edge toward the target edge (−X direction) |
 | 5. Release | Open gripper — cloth should remain folded |
 
+![Cloth Fold Scripted Sequence](docs/images/cloth_fold_scripted.png)
+
+![Cloth Deformation Sequence](docs/images/cloth_fold_sequence.png)
+
 ### Results
 
 | Metric | Scripted Expert | BC (learned) |
@@ -317,6 +341,10 @@ Pick up one edge of a 17.5cm × 17.5cm cloth and fold it onto the opposite edge:
 
 **Key insight**: BC successfully learns to fold cloth but takes ~5× longer than the scripted expert. The learned policy starts with cautious movements (action magnitude ≈ 0.11) then accelerates near the goal (≈ 0.40), demonstrating emergent precision—it learns to be careful with deformable objects.
 
+![Fold Distance Comparison](docs/images/cloth_fold_distance.png)
+
+![Vertex Comparison](docs/images/cloth_fold_vertex_comparison.png)
+
 Training: 100 expert demos (7,700 timesteps) → 5,000 BC steps on MPS → 222-dim state → 4-dim delta actions.
 
 ---
@@ -326,6 +354,8 @@ Training: 100 expert demos (7,700 timesteps) → 5,000 BC steps on MPS → 222-d
 **Bipedal humanoid walking** using a custom 21-DOF MJCF model trained from scratch with PPO and automatic curriculum advancement.
 
 ### Humanoid Model
+
+![Humanoid Model](docs/images/humanoid_model.png)
 
 Custom-authored MuJoCo MJCF with:
 - **21 actuated joints**: 3-DOF hips, 1-DOF knees, 2-DOF ankles, 2-DOF shoulders, 1-DOF elbows (× 2 limbs)
@@ -379,7 +409,11 @@ Automatic stage progression based on 20-episode rolling reward average:
 
 **Training curves:**
 
-![Humanoid Training](outputs/humanoid_walk/training_curves.png)
+![Humanoid Training Curves](docs/images/humanoid_training_curves.png)
+
+**Trained policy rollout:**
+
+![Humanoid Rollout](docs/images/humanoid_rollout.png)
 
 **Key insights:**
 - **Curriculum works**: Agent learns Stage 0 (standing) in 174K steps, then transitions to Stage 1 (walking) automatically.
